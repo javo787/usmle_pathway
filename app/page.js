@@ -73,15 +73,63 @@ export default function Home() {
     // Қарз ва таймер вақтини тиклаш
     const savedDebt = localStorage.getItem('penalty_debt');
     const savedDebtDate = localStorage.getItem('debt_created_at');
-    if(savedDebt) {
-        setData(prev => ({ 
-            ...prev, 
-            penaltyDebt: parseInt(savedDebt),
-            debtCreatedAt: savedDebtDate || null 
-        }));
+    let currentDebt = savedDebt ? parseInt(savedDebt) : 0;
+    let currentDebtDate = savedDebtDate || null;
+
+    // --- АВТОМАТИК ЖАРИМА: КЕЧА РЕЖА ТУЗИЛМАГАНМИ? ---
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+    const yesterdayDataJSON = localStorage.getItem(`journal_${yesterdayStr}`);
+    const autoPenaltyKey = `auto_penalty_applied_${todayStr}`;
+    const alreadyApplied = localStorage.getItem(autoPenaltyKey);
+
+    if (!alreadyApplied && yesterdayDataJSON) {
+      const yesterdayData = JSON.parse(yesterdayDataJSON);
+      const hadPlan = yesterdayData.planning?.schedule && yesterdayData.planning.schedule.trim().length > 5;
+      const hadTomorrowTasks = yesterdayData.planning?.tomorrowPlans?.some(t => t && t.trim().length > 2);
+
+      if (!hadPlan && !hadTomorrowTasks) {
+        // Кеча умуман режа тузилмаган — жарима 50 сомони
+        const PENALTY = 50;
+        currentDebt = currentDebt + PENALTY;
+        const timestamp = currentDebt === PENALTY ? new Date().toISOString() : currentDebtDate;
+        currentDebtDate = timestamp;
+        localStorage.setItem('penalty_debt', currentDebt);
+        if (timestamp) localStorage.setItem('debt_created_at', timestamp);
+        localStorage.setItem(autoPenaltyKey, '1');
+        // Огоҳлантириш keyinroq setData dan keyin ko'rsatiladi
+        setTimeout(() => {
+          alert(`⚠️ АВТОМАТИК ЖАРИМА!\n\nКеча (${yesterdayStr}) режа тузилмади.\n\nЖарима: +${PENALTY} сомони қарзга қўшилди!`);
+        }, 1000);
+      } else {
+        localStorage.setItem(autoPenaltyKey, '1');
+      }
+    } else if (!alreadyApplied && !yesterdayDataJSON) {
+      // Кеча умуман очилмаган — режа ҳам йўқ
+      const PENALTY = 50;
+      currentDebt = currentDebt + PENALTY;
+      const timestamp = currentDebt === PENALTY ? new Date().toISOString() : currentDebtDate;
+      currentDebtDate = timestamp;
+      localStorage.setItem('penalty_debt', currentDebt);
+      if (timestamp) localStorage.setItem('debt_created_at', timestamp);
+      localStorage.setItem(autoPenaltyKey, '1');
+      setTimeout(() => {
+        alert(`⚠️ АВТОМАТИК ЖАРИМА!\n\nКеча (${yesterdayStr}) илова очилмади ва режа тузилмади.\n\nЖарима: +${PENALTY} сомони қарзга қўшилди!`);
+      }, 1000);
+    }
+
+    if (currentDebt > 0) {
+      setData(prev => ({ 
+        ...prev, 
+        penaltyDebt: currentDebt,
+        debtCreatedAt: currentDebtDate 
+      }));
     }
     
-    loadDataForDate(new Date().toISOString().split('T')[0]);
+    loadDataForDate(todayStr);
   }, []);
 
   // --- 2. DATA HANDLERS ---
@@ -284,48 +332,100 @@ export default function Home() {
   }
 
   return (
-    <div className={`min-h-screen pb-24 font-sans transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
+    <div className={`min-h-screen pb-28 transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
       
-      <header className="p-6 pt-10 pb-4">
-        <div className="flex justify-between items-start mb-4">
-           <div>
-             <div className="flex items-center gap-2 mb-1 opacity-70">
-                <span className="text-xs font-bold uppercase tracking-widest">{data.date}</span>
-             </div>
-             <h1 className="text-xl font-bold italic opacity-90">"Сабр ва Ҳаракат"</h1>
-           </div>
+      {/* Фон безаги — юмшоқ геометрик доиралар */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full opacity-[0.06] blur-3xl ${mode === 'critical' ? 'bg-red-500' : mode === 'legend' ? 'bg-amber-400' : 'bg-emerald-500'}`}/>
+        <div className={`absolute top-1/2 -left-24 w-64 h-64 rounded-full opacity-[0.04] blur-3xl ${mode === 'critical' ? 'bg-red-700' : mode === 'legend' ? 'bg-yellow-500' : 'bg-teal-400'}`}/>
+      </div>
+
+      <header className="relative z-10 px-5 pt-12 pb-5">
+        
+        {/* Сана ва режим */}
+        <div className="flex justify-between items-start mb-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{data.date}</p>
+            <h1 className="font-display text-2xl font-bold opacity-90 leading-tight">
+              Сабр ва Ҳаракат
+            </h1>
+            <p className="text-[11px] opacity-40 mt-0.5 font-medium tracking-wide">
+              {mode === 'legend' ? '✦ Афсона режими' : mode === 'critical' ? '⚡ Ҳаракат керак' : '◈ Барқарор'}
+            </p>
+          </div>
            
-           {data.penaltyDebt > 0 ? (
-             <button onClick={() => setShowPayModal(true)} className="bg-red-500/20 border border-red-500 rounded-xl p-2 px-3 animate-pulse">
-               <div className="text-[10px] text-red-500 font-bold uppercase flex items-center justify-end">Тўлаш <Wallet size={10} className="ml-1"/></div>
-               <div className="text-xl font-black text-red-600">{data.penaltyDebt} с.</div>
-             </button>
-           ) : (
-             <div className={`border rounded-xl p-2 px-3 flex items-center gap-2 ${mode === 'legend' ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-emerald-500/10 border-emerald-500 text-emerald-600'}`}>
-                {mode === 'legend' ? <Flame size={16} className="text-amber-500 animate-pulse"/> : <Check size={16}/>}
-                <div className="text-[10px] font-bold uppercase">{mode === 'legend' ? 'LEGEND' : 'ТОЗА'}</div>
-             </div>
-           )}
+          {data.penaltyDebt > 0 ? (
+            <button 
+              onClick={() => setShowPayModal(true)} 
+              className="bg-red-500/15 border border-red-500/50 rounded-2xl p-3 px-4 animate-breathe"
+            >
+              <div className="text-[9px] text-red-400 font-bold uppercase tracking-widest flex items-center justify-end gap-1 mb-0.5">
+                Қарз <Wallet size={9}/>
+              </div>
+              <div className="text-2xl font-black text-red-400 font-display">{data.penaltyDebt}с</div>
+            </button>
+          ) : (
+            <div className={`border rounded-2xl p-3 px-4 flex flex-col items-center gap-1 ${
+              mode === 'legend' 
+                ? 'bg-amber-500/10 border-amber-400/30 text-amber-500' 
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600'
+            }`}>
+              {mode === 'legend' 
+                ? <Flame size={18} className="animate-float"/> 
+                : <Check size={16}/>
+              }
+              <div className="text-[9px] font-black uppercase tracking-widest">
+                {mode === 'legend' ? 'ЛЕГЕНД' : 'ТОЗА'}
+              </div>
+            </div>
+          )}
         </div>
-        <div className={`w-full rounded-full h-4 overflow-hidden border backdrop-blur-sm ${mode==='stable' ? 'bg-gray-200 border-gray-300' : 'bg-white/10 border-white/5'}`}>
-           <div className={`h-full transition-all duration-1000 ease-out relative flex items-center justify-end pr-2 text-[10px] font-bold text-white ${mode === 'critical' ? 'bg-red-600' : mode === 'legend' ? 'bg-amber-400' : 'bg-blue-600'}`} style={{ width: `${Math.max(5, score)}%` }}>{score}%</div>
+
+        {/* Прогресс */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Кунлик балл</span>
+            <span className={`text-sm font-black ${mode === 'critical' ? 'text-red-400' : mode === 'legend' ? 'text-amber-500' : 'text-emerald-600'}`}>
+              {score}%
+            </span>
+          </div>
+          <div className={`w-full rounded-full h-3 overflow-hidden ${mode === 'critical' ? 'bg-red-950/50' : mode === 'legend' ? 'bg-amber-100' : 'bg-emerald-50'} border ${mode === 'critical' ? 'border-red-900/30' : mode === 'legend' ? 'border-amber-200' : 'border-emerald-100'}`}>
+            <div 
+              className={`h-full rounded-full progress-bar relative overflow-hidden ${
+                mode === 'critical' 
+                  ? 'bg-gradient-to-r from-red-700 to-red-500' 
+                  : mode === 'legend' 
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400' 
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-400'
+              }`} 
+              style={{ width: `${Math.max(4, score)}%` }}
+            >
+              {/* Ялтироқ эффект */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"/>
+            </div>
+          </div>
         </div>
+
+        {/* Безак чизиқ */}
+        <div className="ornament-line mt-5"/>
       </header>
 
-      <main className="px-5 space-y-6">
+      <main className="relative z-10 px-5 space-y-4">
         
         {view === 'journal' && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Quitzilla challenges={challenges} onAdd={addCh} onReset={resetCh} onDelete={delCh} theme={currentTheme} />
-          <DayPlan data={data.planning} updateData={updateSection} theme={currentTheme} />
-          <AcademicBattle data={data.academic} updateData={updateSection} theme={currentTheme} />
-          <SpiritualShield data={data.spiritual} updateData={updateSection} theme={currentTheme} />
-          <EnglishTutor data={data.english} updateData={updateSection} theme={currentTheme} />
-          <SportsTracker data={data.sport} academicData={data.academic} updateData={updateSection} theme={currentTheme} />
+        <div>
+          <div className="card-enter card-enter-1"><Quitzilla challenges={challenges} onAdd={addCh} onReset={resetCh} onDelete={delCh} theme={currentTheme} /></div>
+          <div className="card-enter card-enter-2"><DayPlan data={data.planning} updateData={updateSection} theme={currentTheme} /></div>
+          <div className="card-enter card-enter-3"><AcademicBattle data={data.academic} updateData={updateSection} theme={currentTheme} /></div>
+          <div className="card-enter card-enter-4"><SpiritualShield data={data.spiritual} updateData={updateSection} theme={currentTheme} /></div>
+          <div className="card-enter card-enter-5"><EnglishTutor data={data.english} updateData={updateSection} theme={currentTheme} /></div>
+          <div className="card-enter card-enter-6"><SportsTracker data={data.sport} academicData={data.academic} updateData={updateSection} theme={currentTheme} /></div>
 
-          <button onClick={handleSaveCheck} className={`w-full py-4 text-white rounded-2xl font-bold shadow-xl flex items-center justify-center active:scale-95 transition-all mb-6 ${currentTheme.button}`}>
-            <Save size={20} className="mr-2"/> Кунликни Сақлаш
-          </button>
+          <div className="card-enter card-enter-6 mt-2 mb-6">
+            <button onClick={handleSaveCheck} className={`w-full py-4 text-white rounded-3xl font-bold text-base flex items-center justify-center active:scale-95 transition-all ${currentTheme.button}`}>
+              <Save size={18} className="mr-2"/> Кунликни Сақлаш
+            </button>
+          </div>
         </div>
         )}
 
@@ -349,12 +449,30 @@ export default function Home() {
 
       </main>
 
-      <nav className={`fixed bottom-0 left-0 right-0 border-t pb-safe z-40 transition-all duration-700 ${currentTheme.nav}`}>
-        <div className="flex justify-around items-center h-16">
-           <button onClick={()=>setView('journal')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='journal' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><IconHome size={20}/><span className="text-[9px] font-bold mt-1">Журнал</span></button>
-           <button onClick={()=>setView('calendar')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='calendar' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><IconCalendar size={20}/><span className="text-[9px] font-bold mt-1">Тарих</span></button>
-           <button onClick={()=>setView('stats')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='stats' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><BarChart2 size={20}/><span className="text-[9px] font-bold mt-1">Статс</span></button>
-           <button onClick={()=>setView('settings')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='settings' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><IconSettings size={20}/><span className="text-[9px] font-bold mt-1">Созлама</span></button>
+      <nav className={`fixed bottom-0 left-0 right-0 border-t pb-safe z-40 transition-all duration-700 glass ${currentTheme.nav}`}>
+        <div className="flex justify-around items-center h-16 px-2">
+           {[
+             { id: 'journal', icon: IconHome, label: 'Журнал' },
+             { id: 'calendar', icon: IconCalendar, label: 'Тарих' },
+             { id: 'stats', icon: BarChart2, label: 'Статс' },
+             { id: 'settings', icon: IconSettings, label: 'Созлама' },
+           ].map(({ id, icon: Icon, label }) => (
+             <button 
+               key={id}
+               onClick={() => setView(id)} 
+               className={`flex flex-col items-center p-2 rounded-2xl transition-all duration-300 min-w-[60px] ${
+                 view === id 
+                   ? `scale-110 opacity-100 font-black` 
+                   : 'opacity-40 hover:opacity-70'
+               }`}
+             >
+               <Icon size={20}/>
+               <span className="text-[9px] font-bold mt-1 tracking-wide">{label}</span>
+               {view === id && (
+                 <div className={`w-1 h-1 rounded-full mt-0.5 ${mode === 'critical' ? 'bg-red-400' : mode === 'legend' ? 'bg-amber-400' : 'bg-emerald-500'}`}/>
+               )}
+             </button>
+           ))}
         </div>
       </nav>
 
