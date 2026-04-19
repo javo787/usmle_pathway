@@ -1,43 +1,76 @@
 'use client';
 import React from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Zap, RotateCcw } from 'lucide-react';
 
 export default function AcademicBattle({ data, updateData, theme }) {
   return (
-    <div className={`rounded-2xl p-5 mb-6 transition-colors duration-500 ${theme.card}`}>
-      <h3 className={`font-bold flex items-center mb-4 ${theme.cardTitle}`}>
-        <BookOpen size={18} className={`mr-2 ${theme.icon}`}/> Академик Жанг
+    <div className={`p-5 mb-4 relative overflow-hidden ${theme.card}`}>
+      {/* Безак доира */}
+      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-[0.06] bg-current"/>
+      
+      <h3 className={`font-bold flex items-center mb-5 gap-2 ${theme.cardTitle}`}>
+        <BookOpen size={14} className={theme.icon}/> Академик Жанг
       </h3>
-      <div className="space-y-4">
-        <div>
-          <div className={`flex justify-between text-xs font-bold mb-2 opacity-70 ${theme.text}`}>
-             <span>First Aid (15 бет)</span>
-             <span>{data.firstAidDone}</span>
-          </div>
-          <input 
-            type="range" max="30" value={data.firstAidDone} 
-            onChange={(e) => updateData('academic', { ...data, firstAidDone: parseInt(e.target.value) })} 
-            className="w-full h-2 rounded-lg bg-gray-300 accent-current appearance-none cursor-pointer"
-            style={{ color: theme.icon.includes('red') ? '#ef4444' : theme.icon.includes('amber') ? '#f59e0b' : '#3b82f6' }}
+
+      {/* First Aid слайдер */}
+      <div className="mb-5">
+        <div className={`flex justify-between text-xs font-bold mb-2 ${theme.text}`}>
+          <span className="opacity-60">First Aid</span>
+          <span className="font-black">{data.firstAidDone} <span className="opacity-40 font-normal">/ 30 бет</span></span>
+        </div>
+        <div className={`w-full h-2 rounded-full overflow-hidden ${theme.input.includes('black') ? 'bg-red-950/50' : 'bg-emerald-50'}`}>
+          <div 
+            className={`h-full rounded-full transition-all duration-700 ${theme.icon.includes('red') ? 'bg-gradient-to-r from-red-600 to-red-400' : theme.icon.includes('C49A') ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-emerald-600 to-teal-400'}`}
+            style={{ width: `${(data.firstAidDone / 30) * 100}%` }}
           />
         </div>
+        <input 
+          type="range" min="0" max="30" value={data.firstAidDone}
+          onChange={(e) => updateData('academic', { ...data, firstAidDone: parseInt(e.target.value) })}
+          className="w-full h-1 opacity-0 -mt-2 cursor-pointer"
+        />
+      </div>
 
-        <div className="grid grid-cols-2 gap-3">
-           {['UWorld', 'Anki'].map((item) => {
-             const key = item === 'UWorld' ? 'uWorldDone' : 'ankiDone';
-             const step = item === 'UWorld' ? 5 : 10;
-             return (
-               <div key={item} className={`p-3 rounded-xl border text-center ${theme.input}`}>
-                  <div className="text-[10px] opacity-60 font-bold uppercase">{item}</div>
-                  <div className={`text-2xl font-black ${theme.text}`}>{data[key]}</div>
-                  <div className="flex justify-center space-x-2 mt-1">
-                    <button onClick={() => updateData('academic', { ...data, [key]: Math.max(0, data[key] - step) })} className="px-2 opacity-50 hover:opacity-100">-</button>
-                    <button onClick={() => updateData('academic', { ...data, [key]: data[key] + step })} className={`px-2 rounded text-xs font-bold ${theme.button.replace('shadow-lg', '')}`}>+</button>
-                  </div>
-               </div>
-             )
-           })}
-        </div>
+      {/* UWorld ва Anki */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { key: 'uWorldDone', label: 'UWorld', step: 5, max: 80, icon: Zap },
+          { key: 'ankiDone', label: 'Anki', step: 10, max: 200, icon: RotateCcw },
+        ].map(({ key, label, step, max, icon: Icon }) => (
+          <div key={key} className={`p-4 rounded-2xl border text-center ${theme.input}`}>
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <Icon size={10} className={`${theme.icon} opacity-60`}/>
+              <div className="text-[9px] opacity-50 font-black uppercase tracking-widest">{label}</div>
+            </div>
+            <div className={`text-3xl font-black font-display my-1 ${theme.text}`}>{data[key]}</div>
+            <div className="flex justify-center gap-3 mt-2">
+              <button 
+                onClick={() => updateData('academic', { ...data, [key]: Math.max(0, data[key] - step) })} 
+                className={`w-8 h-8 rounded-xl text-lg font-bold opacity-50 hover:opacity-100 transition-all ${theme.input} flex items-center justify-center`}
+              >−</button>
+              <button 
+                onClick={() => updateData('academic', { ...data, [key]: data[key] + step })} 
+                className={`w-8 h-8 rounded-xl text-sm font-black transition-all ${theme.button} flex items-center justify-center`}
+              >+</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Қўшимча */}
+      <div className="flex gap-3 mt-3">
+        {[
+          { key: 'repetition', label: '🔁 Такрор' },
+          { key: 'additionalResource', label: '📎 Қўшимча' },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => updateData('academic', { ...data, [key]: !data[key] })}
+            className={`flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 ${data[key] ? theme.button : theme.input + ' opacity-60'}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
     </div>
   );
