@@ -1,6 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
-import { AuthProvider } from '@/components/AuthProvider'; // <-- НОВЫЙ ИМПОРТ
+import { AuthProvider } from '@/components/AuthProvider';
+import NotificationManager from '@/components/NotificationManager';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
@@ -22,8 +23,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="uz">
       <body className={inter.className}>
-        {/* Оборачиваем всё приложение в провайдер авторизации */}
         <AuthProvider>
+          <NotificationManager />
           {children}
         </AuthProvider>
       </body>
