@@ -199,3 +199,10 @@ bot.onText(/💀 Срыв/, async (msg) => {
 });
 
 bot.on('polling_error', (error) => {}); // Игнор мелких ошибок сети
+
+// Render учун HTTP сервер
+const http = require('http');
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('Bot is alive!');
+}).listen(process.env.PORT || 3000);
