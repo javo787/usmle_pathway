@@ -93,7 +93,7 @@ function WeekStreak({ theme }) {
 // АСОСИЙ КОМПОНЕНТ
 // ============================================
 export default function SportsTracker({ data, academicData, updateData, theme }) {
-  const penalty = getSportPenalty(academicData || { uWorldDone: 0 });
+  const penalty = getSportPenalty(academicData || { uWorldDone: 0 }, data, null);
   const duration = data.duration || 0;
   const pct = Math.min(100, (duration / DURATION_TARGET) * 100);
 
@@ -246,3 +246,4 @@ export default function SportsTracker({ data, academicData, updateData, theme })
     </div>
   );
 }
+
