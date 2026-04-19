@@ -1,123 +1,325 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, Zap, Activity, Brain, Plus, Trash2, RefreshCw, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Shield, AlertTriangle, Zap, Activity, Brain, Plus, Trash2, RefreshCw, X, Wind, Dumbbell, Moon, ChevronRight, Clock } from 'lucide-react';
 
+// ============================================
+// МАЪЛУМОТЛАР
+// ============================================
 const QUOTES = [
-  "Сабр қил. Албатта, Аллоҳнинг ваъдаси ҳақдир. (Рум: 60)",
-  "Зинога яқинлашманглар! У фаҳш иш ва ёмон йўлдир. (Исро: 32)",
-  "Тиббий факт: Дофамин 'очлиги' (craving) ўртача 15 дақиқа давом этади. Шунчаки чидаб бер.",
-  "Эслатма: Сен келажакда инсон миясини операция қиласан. Ўз миянгни бошқара олмасанг, беморникини қандай бошқарасан?",
-  "Ҳар бир ҳаром қилинган қараш — қалбга отилган заҳарли ўқдир."
+  { text: "Зинога яқинлашманглар! У фаҳш иш ва ёмон йўлдир.", source: "Қуръон, Исро: 32" },
+  { text: "Сабр қил. Албатта, Аллоҳнинг ваъдаси ҳақдир.", source: "Қуръон, Рум: 60" },
+  { text: "Ким нафсини тия олса — у чинакам қаҳрамондир.", source: "Ҳадис" },
+  { text: "Дофамин 'очлиги' ўртача 15 дақиқа давом этади. Шунчаки чидаб бер.", source: "Нейрология" },
+  { text: "Сен келажакда инсон миясини операция қиласан. Ўз миянгни бошқара олмасанг, беморникини қандай бошқарасан?", source: "Ўз-ўзингга эслатма" },
+];
+
+const ALTERNATIVES = [
+  { icon: Dumbbell, label: "20 та берпи қил",    desc: "Энергияни бошқа йўналтир" },
+  { icon: Wind,     label: "Нафас машқи",         desc: "4-7-8 техникаси" },
+  { icon: Moon,     label: "2 ракаат намоз ўқи",  desc: "Аллоҳга муrojaat қил" },
+  { icon: Brain,    label: "Совуқ сув ич",        desc: "Вагус нерви тинчитади" },
 ];
 
 const LEVELS = [
-  { days: 0, title: "Дофамин Ломкаси", desc: "Энг қийин давр. Сабр!", color: "text-red-500", icon: AlertTriangle },
-  { days: 3, title: "Гормонал Тикланиш", desc: "Рецепторлар уйғонмоқда.", color: "text-orange-500", icon: Activity },
-  { days: 7, title: "Тестостерон Cho'qqisi", desc: "Энергия: 145% UP 🚀", color: "text-yellow-500", icon: Zap },
-  { days: 30, title: "Нейропластиклик", desc: "Мия қайта қурилди.", color: "text-emerald-500", icon: Brain },
-  { days: 90, title: "Мутлақ Ҳокимлик", desc: "Нафс жиловланди.", color: "text-blue-500", icon: Shield },
+  { days: 0,  title: "Дофамин Ломкаси",   desc: "Энг қийин давр. Сабр!", color: "text-red-500",     bg: "bg-red-500",     icon: AlertTriangle },
+  { days: 3,  title: "Гормонал Тикланиш", desc: "Рецепторлар уйғонмоқда.", color: "text-orange-500", bg: "bg-orange-500",  icon: Activity      },
+  { days: 7,  title: "Тестостерон Чўққи", desc: "Энергия: 145% UP 🚀",    color: "text-yellow-500", bg: "bg-yellow-500",  icon: Zap           },
+  { days: 30, title: "Нейропластиклик",   desc: "Мия қайта қурилди.",     color: "text-emerald-500",bg: "bg-emerald-500", icon: Brain         },
+  { days: 90, title: "Мутлақ Ҳокимлик",  desc: "Нафс жиловланди.",       color: "text-blue-500",   bg: "bg-blue-500",    icon: Shield        },
 ];
 
+const RELAPSE_REASONS = ['Зерикиш', 'Стресс', 'Уйқусизлик', 'Ижтимоий тармоқ', 'Ёлғизлик', 'Бошқа'];
+
+// ============================================
+// SOS МОДАЛИ — 3 қатламли
+// ============================================
+function SOSModal({ onClose, theme }) {
+  const [step, setStep] = useState(1); // 1=цитата, 2=нафас, 3=альтернатива
+  const [breathPhase, setBreathPhase] = useState('inhale'); // inhale|hold|exhale
+  const [breathCount, setBreathCount] = useState(0);
+  const [breathTimer, setBreathTimer] = useState(4);
+  const [quoteIdx] = useState(() => Math.floor(Math.random() * QUOTES.length));
+  const intervalRef = useRef(null);
+
+  // Нафас машқи логикаси (4-7-8)
+  useEffect(() => {
+    if (step !== 2) return;
+    const phases = { inhale: 4, hold: 7, exhale: 8 };
+    const order = ['inhale', 'hold', 'exhale'];
+    let current = 0;
+    let timeLeft = phases[order[0]];
+    setBreathPhase(order[0]);
+    setBreathTimer(timeLeft);
+
+    intervalRef.current = setInterval(() => {
+      timeLeft -= 1;
+      setBreathTimer(timeLeft);
+      if (timeLeft <= 0) {
+        current = (current + 1) % 3;
+        if (current === 0) setBreathCount(c => c + 1);
+        timeLeft = phases[order[current]];
+        setBreathPhase(order[current]);
+        setBreathTimer(timeLeft);
+      }
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, [step]);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const phaseLabel = { inhale: 'Нафас ол', hold: 'Ушлаб тур', exhale: 'Нафас чиқар' };
+  const phaseScale = { inhale: 'scale-110', hold: 'scale-110', exhale: 'scale-90' };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onPointerDown={onClose}/>
+      <div
+        className="relative w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{ zIndex: 1 }}
+        onPointerDown={e => e.stopPropagation()}
+      >
+        {/* Декоратив чизиқ */}
+        <div className="h-1 w-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500"/>
+
+        <div className="bg-[#0A0A0A] p-6">
+          {/* Қадамлар */}
+          <div className="flex items-center gap-2 mb-5">
+            {[1,2,3].map(s => (
+              <div key={s} className={`flex-1 h-1 rounded-full transition-all duration-500 ${step >= s ? 'bg-emerald-500' : 'bg-white/10'}`}/>
+            ))}
+            <button onPointerDown={onClose} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center ml-1">
+              <X size={14} className="text-white/60"/>
+            </button>
+          </div>
+
+          {/* ===== ҚАДАМ 1: ЦИТАТА ===== */}
+          {step === 1 && (
+            <div className="text-center py-2">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
+                <Shield size={32} className="text-emerald-400"/>
+              </div>
+              <h2 className="text-2xl font-black text-white mb-4">Тўхта!</h2>
+              <blockquote className="text-base text-emerald-100/90 italic leading-relaxed mb-2">
+                "{QUOTES[quoteIdx].text}"
+              </blockquote>
+              <p className="text-xs text-white/30 mb-6">{QUOTES[quoteIdx].source}</p>
+              <div className="bg-white/5 rounded-2xl p-3 mb-5 text-xs text-white/50">
+                ⏱ Бу ҳис <span className="text-amber-400 font-black">15 дақиқа</span> давом этади. Кейин ўтади.
+              </div>
+              <button
+                onPointerDown={() => setStep(2)}
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-500 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2"
+              >
+                Нафас машқи <ChevronRight size={16}/>
+              </button>
+            </div>
+          )}
+
+          {/* ===== ҚАДАМ 2: НАФАС МАШҚИ ===== */}
+          {step === 2 && (
+            <div className="text-center py-2">
+              <h2 className="text-lg font-black text-white mb-1">4-7-8 Нафас</h2>
+              <p className="text-xs text-white/40 mb-6">{breathCount} марта бажарилди</p>
+
+              {/* Анимация доира */}
+              <div className="relative flex items-center justify-center mb-6">
+                <div className={`w-32 h-32 rounded-full border-4 border-emerald-500/30 flex items-center justify-center transition-all duration-1000 ${phaseScale[breathPhase]}`}
+                  style={{ boxShadow: breathPhase === 'inhale' ? '0 0 40px rgba(16,185,129,0.3)' : breathPhase === 'exhale' ? '0 0 10px rgba(16,185,129,0.05)' : '0 0 25px rgba(16,185,129,0.2)' }}
+                >
+                  <div className={`w-20 h-20 rounded-full transition-all duration-1000 flex flex-col items-center justify-center ${breathPhase === 'inhale' ? 'bg-emerald-500/20' : breathPhase === 'hold' ? 'bg-amber-500/20' : 'bg-blue-500/20'}`}>
+                    <span className="text-2xl font-black text-white">{breathTimer}</span>
+                    <span className="text-[9px] text-white/50">{phaseLabel[breathPhase]}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className={`text-lg font-bold mb-6 ${breathPhase === 'inhale' ? 'text-emerald-400' : breathPhase === 'hold' ? 'text-amber-400' : 'text-blue-400'}`}>
+                {phaseLabel[breathPhase]}
+              </p>
+
+              {breathCount >= 3 && (
+                <button onPointerDown={() => setStep(3)} className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-500 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 mb-2">
+                  Яхши бўляпти <ChevronRight size={16}/>
+                </button>
+              )}
+              <button onPointerDown={() => setStep(3)} className="w-full py-2 text-white/30 text-xs">
+                Ўтказиб юбориш →
+              </button>
+            </div>
+          )}
+
+          {/* ===== ҚАДАМ 3: АЛЬТЕРНАТИВА ===== */}
+          {step === 3 && (
+            <div className="py-2">
+              <h2 className="text-lg font-black text-white mb-1 text-center">Энди нима қилиш керак?</h2>
+              <p className="text-xs text-white/40 text-center mb-5">Бир нарсани танланг ва бажаринг</p>
+              <div className="space-y-2.5 mb-5">
+                {ALTERNATIVES.map(({ icon: Icon, label, desc }) => (
+                  <button
+                    key={label}
+                    onPointerDown={onClose}
+                    className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-500/40 hover:bg-emerald-500/10 transition-all text-left"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                      <Icon size={18} className="text-emerald-400"/>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{label}</p>
+                      <p className="text-[10px] text-white/40">{desc}</p>
+                    </div>
+                    <ChevronRight size={14} className="text-white/20 ml-auto"/>
+                  </button>
+                ))}
+              </div>
+              <button onPointerDown={onClose} className="w-full py-3 bg-emerald-600 rounded-2xl font-bold text-white text-sm">
+                ✓ Ўзимга келдим
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// СРЫВ МОДАЛИ
+// ============================================
+function RelapseModal({ challenge, onConfirm, onCancel, theme }) {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div className="absolute inset-0 bg-red-950/90 backdrop-blur-md" onPointerDown={onCancel}/>
+      <div
+        className="relative w-full max-w-sm bg-black border border-red-500/40 rounded-3xl p-6 shadow-[0_0_60px_rgba(220,38,38,0.3)]"
+        style={{ zIndex: 1 }}
+        onPointerDown={e => e.stopPropagation()}
+      >
+        <div className="h-1 w-full bg-red-600 rounded-full mb-5 -mx-0"/>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <RefreshCw size={22} className="text-red-400"/>
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-white">Срыв бўлдими?</h3>
+            <p className="text-xs text-white/40">"{challenge?.title}" трекери тозаланади</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-white/50 mb-3">Сабабини белгиланг — кейин таҳлил қиламиз:</p>
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          {RELAPSE_REASONS.map(r => (
+            <button
+              key={r}
+              onPointerDown={() => setReason(r)}
+              className={`py-2.5 px-3 rounded-2xl text-xs font-bold border transition-all ${
+                reason === r
+                  ? 'bg-red-600 border-red-500 text-white'
+                  : 'border-white/10 bg-white/5 text-white/50 hover:border-red-500/30'
+              }`}
+            >{r}</button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button onPointerDown={onCancel} className="flex-1 py-3 rounded-2xl bg-white/5 text-white/50 font-bold text-sm">
+            Йўқ
+          </button>
+          <button
+            onPointerDown={() => reason && onConfirm(reason)}
+            disabled={!reason}
+            className="flex-1 py-3 rounded-2xl bg-red-600 disabled:opacity-30 text-white font-bold text-sm shadow-lg shadow-red-600/30"
+          >
+            Ҳа, Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// АСОСИЙ КОМПОНЕНТ
+// ============================================
 export default function Quitzilla({ challenges = [], onAdd, onReset, onDelete, theme }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-  
-  // Модаллар
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [showRelapseModal, setShowRelapseModal] = useState(false);
-  const [relapseReason, setRelapseReason] = useState("");
+  const [newTitle, setNewTitle] = useState('');
+  const [showRelapse, setShowRelapse] = useState(false);
   const [showSOS, setShowSOS] = useState(false);
-  const [sosContent, setSosContent] = useState("");
+  const [pulse, setPulse] = useState(false);
 
-  // 1. ХАВФСИЗЛИК: Агар activeIndex мавжуд бўлмаган элементга тўғри келса, 0-га қайтарамиз
-  const safeIndex = (challenges && challenges[activeIndex]) ? activeIndex : 0;
+  const safeIndex = challenges[activeIndex] ? activeIndex : 0;
   const activeChallenge = challenges[safeIndex] || null;
 
+  // Таймер
   useEffect(() => {
     if (!activeChallenge) return;
-    
-    // Таймерни дарҳол янгилаш (кутиб ўтирмасдан)
-    const updateTimer = () => {
-      const start = new Date(activeChallenge.start);
-      const now = new Date();
-      const diff = Math.max(0, now - start);
+    const update = () => {
+      const diff = Math.max(0, Date.now() - new Date(activeChallenge.start).getTime());
       setTime({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((diff / 1000 / 60) % 60),
+        days:    Math.floor(diff / 86400000),
+        hours:   Math.floor((diff / 3600000) % 24),
+        minutes: Math.floor((diff / 60000) % 60),
         seconds: Math.floor((diff / 1000) % 60),
       });
+      setPulse(p => !p);
     };
-
-    updateTimer(); // Биринчи марта дарҳол чақирамиз
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
   }, [activeChallenge]);
 
-  const currentLevel = activeChallenge 
-    ? (LEVELS.slice().reverse().find(l => time.days >= l.days) || LEVELS[0])
+  const currentLevel = activeChallenge
+    ? ([...LEVELS].reverse().find(l => time.days >= l.days) || LEVELS[0])
     : LEVELS[0];
-  
-  const nextLevel = activeChallenge 
-    ? LEVELS.find(l => l.days > time.days)
-    : null;
-    
-  const progress = nextLevel 
-    ? ((time.days - currentLevel.days) / (nextLevel.days - currentLevel.days)) * 100 
+  const nextLevel = LEVELS.find(l => l.days > time.days);
+  const progress = nextLevel
+    ? ((time.days - currentLevel.days) / (nextLevel.days - currentLevel.days)) * 100
     : 100;
 
   const handleAdd = () => {
-    if (newTitle.trim()) {
-      onAdd(newTitle);
-      setNewTitle("");
-      setShowAddModal(false);
-      // Янги қўшилганда, автоматик ўшанга ўтиш учун индексни янгилаймиз
-      // Лекин бироз кутамиз, state янгилансин
-      setTimeout(() => setActiveIndex(challenges.length), 100); 
-    }
+    if (!newTitle.trim()) return;
+    onAdd(newTitle.trim());
+    setNewTitle('');
+    setShowAddModal(false);
+    setTimeout(() => setActiveIndex(challenges.length), 100);
   };
 
-  const handleDelete = () => {
+  const handleRelapse = (reason) => {
     if (activeChallenge) {
-      onDelete(activeChallenge.id);
-      setActiveIndex(0); // Ўчиргандан кейин биринчисига қайтамиз
+      onReset(activeChallenge.id, reason);
+      setShowRelapse(false);
     }
   };
 
-  const handleRelapse = () => {
-    if (activeChallenge) {
-      onReset(activeChallenge.id, relapseReason || "Сабабсиз");
-      setShowRelapseModal(false);
-      setRelapseReason("");
-    }
-  };
-
-  const handleSOS = () => {
-    const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-    setSosContent(randomQuote);
-    setShowSOS(true);
-  };
-
-  // Агар умуман challenge бўлмаса
-  if (!challenges || challenges.length === 0) {
+  // Бўш ҳолат
+  if (!challenges.length) {
     return (
-      <div className={`p-8 rounded-3xl border border-dashed border-gray-400/30 text-center ${theme.card}`}>
-        <Shield size={48} className="mx-auto mb-4 opacity-50"/>
-        <h3 className="font-bold text-lg mb-2">Ҳали мақсад йўқ</h3>
-        <button onClick={() => setShowAddModal(true)} className={`px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition ${theme.button}`}>
-          + Янги Мақсад (Start)
+      <div className={`p-8 rounded-3xl text-center mb-4 border border-dashed ${theme.card}`}>
+        <Shield size={40} className={`mx-auto mb-3 opacity-30 ${theme.icon}`}/>
+        <p className={`text-sm opacity-50 mb-4 ${theme.text}`}>Ҳали трекер йўқ</p>
+        <button onClick={() => setShowAddModal(true)} className={`px-6 py-3 rounded-2xl font-bold text-sm ${theme.button}`}>
+          + Янги трекер
         </button>
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-             <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-               <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-white font-bold text-lg">Янги Жанг</h3>
-                  <button onClick={()=>setShowAddModal(false)}><X className="text-gray-500"/></button>
-               </div>
-               <input autoFocus value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Номи (мас: Нафс, TikTok...)" className="w-full p-4 rounded-xl bg-black/50 text-white border border-gray-600 mb-4 outline-none focus:border-emerald-500 transition"/>
-               <button onClick={handleAdd} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-white font-bold shadow-lg shadow-emerald-500/20 transition">Бошлаш</button>
-             </div>
+          <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+            <div className="absolute inset-0 bg-black/80" onPointerDown={() => setShowAddModal(false)}/>
+            <div className="relative bg-slate-900 border border-slate-700 p-6 rounded-3xl w-full max-w-sm" style={{ zIndex: 1 }} onPointerDown={e => e.stopPropagation()}>
+              <h3 className="text-white font-bold mb-4">Янги трекер</h3>
+              <input autoFocus value={newTitle} onChange={e => setNewTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="Масалан: Нафс, TikTok..." className="w-full p-3 rounded-2xl bg-black text-white border border-slate-700 mb-4 outline-none focus:border-emerald-500"/>
+              <button onClick={handleAdd} className="w-full py-3 bg-emerald-600 rounded-2xl text-white font-bold">Бошлаш</button>
+            </div>
           </div>
         )}
       </div>
@@ -125,148 +327,127 @@ export default function Quitzilla({ challenges = [], onAdd, onReset, onDelete, t
   }
 
   return (
-    <div className={`rounded-3xl p-6 mb-8 transition-all duration-700 relative overflow-hidden group ${theme.card}`}>
-      
-      {/* 1. TABS (Glass Pills) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide">
-        {challenges.map((c, idx) => (
-          <button 
-            key={c.id} 
-            onClick={() => setActiveIndex(idx)}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-300 ${
-              idx === safeIndex 
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 scale-105' 
-                : 'bg-white/10 text-current border border-current/10 hover:bg-white/20'
+    <div className={`p-5 mb-4 relative overflow-hidden ${theme.card}`}>
+
+      {/* Фон безак */}
+      <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.06] blur-2xl ${currentLevel.bg}`}/>
+
+      {/* Табlar */}
+      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
+        {challenges.map((c, i) => (
+          <button
+            key={c.id}
+            onClick={() => setActiveIndex(i)}
+            className={`px-3 py-1.5 rounded-full text-[10px] font-black whitespace-nowrap transition-all ${
+              i === safeIndex
+                ? `${currentLevel.bg} text-white shadow-lg`
+                : theme.input + ' opacity-50'
             }`}
-          >
-            {c.title}
-          </button>
+          >{c.title}</button>
         ))}
-        {/* Қўшиш кнопкаси - Энди доим ишлайди */}
-        <button 
-          onClick={() => { setNewTitle(""); setShowAddModal(true); }} 
-          className="px-3 py-1.5 rounded-full bg-white/5 border border-current/10 hover:bg-emerald-500 hover:text-white transition flex items-center shrink-0"
-        >
-          <Plus size={14}/>
-        </button>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${theme.input} opacity-50 hover:opacity-100`}
+        ><Plus size={13}/></button>
       </div>
 
-      {/* 2. HEADER */}
-      <div className="flex justify-between items-end mb-6">
+      {/* Сарлавҳа */}
+      <div className="flex items-start justify-between mb-4">
         <div>
-           <div className="flex items-center gap-2 mb-1">
-             <div className={`p-1.5 rounded-lg ${currentLevel.color.replace('text', 'bg')}/10`}>
-                <currentLevel.icon size={18} className={currentLevel.color}/>
-             </div>
-             <h3 className={`font-black text-xl tracking-tight ${theme.text}`}>{activeChallenge.title}</h3>
-           </div>
-           <p className={`text-[10px] font-bold uppercase tracking-widest pl-1 ${currentLevel.color}`}>
-             {currentLevel.title}
-           </p>
+          <div className="flex items-center gap-2">
+            <currentLevel.icon size={16} className={currentLevel.color}/>
+            <h3 className={`font-black text-lg ${theme.text}`}>{activeChallenge.title}</h3>
+          </div>
+          <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${currentLevel.color}`}>
+            {currentLevel.title}
+          </p>
         </div>
-        <div className="flex gap-2">
-           <button onClick={handleDelete} className="p-2 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition"><Trash2 size={16}/></button>
-           <button onClick={() => setShowRelapseModal(true)} className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold rounded-lg hover:bg-red-500 hover:text-white transition">СРЫВ</button>
-        </div>
-      </div>
-
-      {/* 3. CRYSTAL TIMER (Кичрайтирилган ва чиройли) */}
-      <div className="relative mb-6 overflow-hidden rounded-2xl border border-white/40 shadow-xl group-hover:shadow-2xl transition-all duration-500">
-        
-        {/* Glass Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent backdrop-blur-md z-0"></div>
-        
-        {/* Content */}
-        <div className="relative z-10 flex justify-center items-baseline space-x-2 sm:space-x-4 py-6 px-2 font-mono">
-           <div className="text-center">
-              {/* ФОНТЛАР КИЧРАЙТИРИЛДИ: text-3xl sm:text-4xl */}
-              <div className={`text-3xl sm:text-4xl font-black drop-shadow-sm ${theme.text}`}>{time.days}</div>
-              <div className="text-[8px] font-bold uppercase opacity-50 tracking-[0.2em]">Кун</div>
-           </div>
-           <div className={`text-2xl font-light opacity-30 ${theme.text}`}>:</div>
-           <div className="text-center">
-              <div className={`text-3xl sm:text-4xl font-black drop-shadow-sm ${theme.text}`}>{time.hours}</div>
-              <div className="text-[8px] font-bold uppercase opacity-50 tracking-[0.2em]">Соат</div>
-           </div>
-           <div className={`text-2xl font-light opacity-30 ${theme.text}`}>:</div>
-           <div className="text-center">
-              <div className={`text-3xl sm:text-4xl font-black drop-shadow-sm ${theme.text}`}>{time.minutes}</div>
-              <div className="text-[8px] font-bold uppercase opacity-50 tracking-[0.2em]">Мин</div>
-           </div>
-           <div className={`text-2xl font-light opacity-30 ${theme.text}`}>:</div>
-           <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-black drop-shadow-sm text-emerald-500">{time.seconds}</div>
-              <div className="text-[8px] font-bold uppercase opacity-50 tracking-[0.2em]">Сек</div>
-           </div>
+        <div className="flex gap-1.5">
+          <button onClick={() => setShowRelapse(true)} className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black rounded-xl hover:bg-red-500 hover:text-white transition">
+            СРЫВ
+          </button>
+          <button onClick={() => onDelete(activeChallenge.id)} className={`w-8 h-8 rounded-xl flex items-center justify-center opacity-30 hover:opacity-70 transition ${theme.input}`}>
+            <Trash2 size={13}/>
+          </button>
         </div>
       </div>
 
-      {/* 4. PROGRESS BAR */}
-      <div className="mb-6 relative">
-        <div className="flex justify-between text-[10px] font-bold opacity-60 mb-2 px-1">
-          <span>{currentLevel.desc}</span>
-          <span>{nextLevel ? `${time.days} / ${nextLevel.days} кун` : 'MAX LEVEL'}</span>
-        </div>
-        <div className="w-full h-2 bg-gray-200/20 rounded-full overflow-hidden backdrop-blur-sm border border-white/10">
-          <div className={`h-full transition-all duration-1000 shadow-[0_0_10px_currentColor] ${currentLevel.color.replace('text', 'bg')}`} style={{ width: `${progress}%` }}></div>
-        </div>
-      </div>
-
-      {/* 5. SOS BUTTON */}
-      <button onClick={handleSOS} className="w-full py-4 bg-gradient-to-r from-red-500/10 to-red-900/10 border border-red-500/30 text-red-500 font-bold rounded-xl text-xs uppercase tracking-widest flex items-center justify-center hover:from-red-500 hover:to-red-600 hover:text-white transition-all group-hover:shadow-lg shadow-red-500/10">
-        <AlertTriangle size={16} className="mr-2 animate-pulse"/> SOS (Тезкор Ёрдам)
-      </button>
-
-      {/* --- MODALS --- */}
-      
-      {/* SOS MODAL */}
-      {showSOS && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg animate-in fade-in zoom-in duration-300">
-          <div className="bg-slate-900 border border-slate-700 p-8 rounded-3xl max-w-sm text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent"></div>
-            <Shield size={56} className="mx-auto text-emerald-500 mb-6 animate-bounce"/>
-            <h2 className="text-3xl font-black text-white mb-4">Тўхта!</h2>
-            <p className="text-lg text-emerald-100 mb-8 italic font-serif leading-relaxed opacity-90">
-              "{sosContent}"
-            </p>
-            <button 
-              onClick={() => setShowSOS(false)} 
-              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-white shadow-lg shadow-emerald-500/30 transition transform active:scale-95"
-            >
-              Ўзимга келдим.
-            </button>
+      {/* Таймер */}
+      <div className={`rounded-2xl p-4 mb-4 border relative overflow-hidden ${theme.input}`}>
+        <div className={`absolute inset-0 opacity-[0.03] ${currentLevel.bg}`}/>
+        <div className="relative flex justify-center items-baseline gap-3">
+          {[
+            { val: time.days,    label: 'Кун'  },
+            { val: time.hours,   label: 'Соат' },
+            { val: time.minutes, label: 'Мин'  },
+          ].map(({ val, label }) => (
+            <div key={label} className="text-center">
+              <div className={`text-3xl font-black font-display ${theme.text}`}>
+                {String(val).padStart(2, '0')}
+              </div>
+              <div className="text-[8px] opacity-40 font-bold uppercase tracking-widest">{label}</div>
+            </div>
+          ))}
+          <div className={`text-xl font-light opacity-20 ${theme.text} self-start mt-1`}>:</div>
+          <div className="text-center">
+            <div className={`text-3xl font-black font-display transition-all duration-300 ${pulse ? currentLevel.color : theme.text}`}>
+              {String(time.seconds).padStart(2, '0')}
+            </div>
+            <div className="text-[8px] opacity-40 font-bold uppercase tracking-widest">Сек</div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Прогресс */}
+      <div className="mb-4">
+        <div className="flex justify-between text-[10px] opacity-40 font-bold mb-1.5">
+          <span>{currentLevel.desc}</span>
+          <span>{nextLevel ? `${nextLevel.days} кунга ${nextLevel.days - time.days} кун қолди` : '🏆 MAX'}</span>
+        </div>
+        <div className={`w-full h-2 rounded-full overflow-hidden ${theme.card.includes('1A0F') ? 'bg-white/10' : 'bg-black/5'}`}>
+          <div
+            className={`h-full rounded-full transition-all duration-1000 ${currentLevel.bg}`}
+            style={{ width: `${Math.max(2, progress)}%` }}
+          />
+        </div>
+        {/* Level белгилари */}
+        <div className="flex justify-between mt-1.5">
+          {LEVELS.map(l => (
+            <div key={l.days} className={`text-[7px] font-black ${time.days >= l.days ? currentLevel.color : 'opacity-20'}`}>
+              {l.days === 0 ? '0' : l.days + 'к'}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* SOS тугма */}
+      <button
+        onClick={() => setShowSOS(true)}
+        className="w-full py-3 rounded-2xl border border-red-500/30 bg-red-500/5 text-red-500 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-500/15 transition"
+      >
+        <AlertTriangle size={14} className="animate-pulse"/> SOS — Тезкор Ёрдам
+      </button>
+
+      {/* МОДАЛЛАР */}
+      {showSOS && <SOSModal onClose={() => setShowSOS(false)} theme={theme}/>}
+      {showRelapse && <RelapseModal challenge={activeChallenge} onConfirm={handleRelapse} onCancel={() => setShowRelapse(false)} theme={theme}/>}
 
       {/* ADD MODAL */}
       {showAddModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-             <div className="bg-slate-900 p-6 rounded-2xl w-full max-w-sm border border-slate-700 shadow-2xl">
-               <h3 className="text-white font-bold mb-4 flex items-center"><Plus size={18} className="mr-2"/> Янги Трекер</h3>
-               <input autoFocus value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Номи (мас: TikTok, Шакар...)" className="w-full p-3 rounded-xl bg-black text-white border border-gray-600 mb-4 outline-none focus:border-emerald-500 transition"/>
-               <div className="flex gap-2">
-                 <button onClick={()=>setShowAddModal(false)} className="flex-1 py-3 text-gray-400 font-bold">Бекор қилиш</button>
-                 <button onClick={handleAdd} className="flex-1 bg-emerald-600 py-3 rounded-xl text-white font-bold shadow-lg shadow-emerald-500/20">Қўшиш</button>
-               </div>
-             </div>
-          </div>
-      )}
-
-      {/* RELAPSE MODAL */}
-      {showRelapseModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-red-950/90 backdrop-blur-md animate-in fade-in">
-          <div className="bg-black border border-red-500/50 p-6 rounded-2xl w-full max-w-sm shadow-[0_0_50px_rgba(220,38,38,0.5)]">
-            <h3 className="text-xl font-bold text-red-500 mb-2 flex items-center"><RefreshCw size={20} className="mr-2"/> Срыв бўлдими?</h3>
-            <p className="text-xs text-gray-400 mb-4">Ростгўйлик — даволашнинг биринчи шарти.</p>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {['Зерикиш', 'Стресс', 'Ижтимоий тармоқ', 'Уйқусизлик'].map(reason => (
-                <button key={reason} onClick={() => setRelapseReason(reason)} className={`p-2 text-xs rounded border transition ${relapseReason === reason ? 'bg-red-600 border-red-500 text-white' : 'border-gray-800 bg-gray-900 text-gray-400'}`}>{reason}</button>
-              ))}
-            </div>
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onPointerDown={() => setShowAddModal(false)}/>
+          <div className="relative bg-slate-900 border border-slate-700 p-6 rounded-3xl w-full max-w-sm" style={{ zIndex: 1 }} onPointerDown={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Plus size={16}/> Янги трекер</h3>
+            <input
+              autoFocus value={newTitle}
+              onChange={e => setNewTitle(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()}
+              placeholder="Масалан: Нафс, TikTok, Шакар..."
+              className="w-full p-3 rounded-2xl bg-black text-white border border-slate-700 mb-4 outline-none focus:border-emerald-500 transition"
+            />
             <div className="flex gap-2">
-              <button onClick={() => setShowRelapseModal(false)} className="flex-1 py-3 bg-gray-800 rounded-xl text-sm font-bold text-gray-300">Йўқ</button>
-              <button onClick={handleRelapse} disabled={!relapseReason} className="flex-1 py-3 bg-red-600 disabled:opacity-50 rounded-xl text-white text-sm font-bold shadow-lg shadow-red-600/30">Ҳа, Reset</button>
+              <button onPointerDown={() => setShowAddModal(false)} className="flex-1 py-3 rounded-2xl bg-white/5 text-white/50 font-bold text-sm">Бекор</button>
+              <button onPointerDown={handleAdd} className="flex-1 py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm">Бошлаш</button>
             </div>
           </div>
         </div>
