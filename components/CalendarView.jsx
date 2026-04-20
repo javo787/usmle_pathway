@@ -3,104 +3,139 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function CalendarView({ selectedDate, onSelectDate, theme }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
-  const [history, setHistory] = useState({});
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const d = new Date(selectedDate || new Date());
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [scores, setScores] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  // Ой ўзгарганда, шу ойдаги барча маълумотларни ўқиб оламиз (ранглар учун)
+  // API dan oxirgi 30 kunlik scorelarni yuklaymiz
   useEffect(() => {
-    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    
-    const newHistory = {};
-    for (let d = 1; d <= endOfMonth.getDate(); d++) {
-      const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const saved = localStorage.getItem(`journal_${dateStr}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        newHistory[d] = parsed.score || 0;
+    const fetchScores = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/journal');
+        const json = await res.json();
+        const logs = json.logs || [];
+        const map = {};
+        logs.forEach(log => {
+          if (log.date && log.score !== undefined) {
+            map[log.date] = log.score;
+          }
+        });
+        setScores(map);
+      } catch (err) {
+        console.error('CalendarView fetch error:', err);
+      } finally {
+        setLoading(false);
       }
-    }
-    setHistory(newHistory);
-  }, [currentMonth]);
+    };
+    fetchScores();
+  }, []);
 
-  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-  const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay(); // 0 = Sunday
+  const year  = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
 
-  // Ҳафта Душанбадан бошланиши учун (0=Sun -> 6, 1=Mon -> 0)
-  const shiftDay = (day) => (day === 0 ? 6 : day - 1);
-  const startEmptyDays = shiftDay(firstDay);
+  const firstDay  = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr  = new Date().toISOString().split('T')[0];
 
-  const days = [];
-  // Бўш катаклар (ой бошигача)
-  for (let i = 0; i < startEmptyDays; i++) {
-    days.push(<div key={`empty-${i}`} className="h-14"></div>);
-  }
+  const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
 
-  // Кунлар
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const score = history[d];
-    
-    let bgClass = "bg-gray-100 text-gray-400 border border-transparent";
-    
-    if (score !== undefined) {
-      if (score < 50) bgClass = "bg-red-100 text-red-700 border border-red-200 font-bold";
-      else if (score < 80) bgClass = "bg-blue-100 text-blue-700 border border-blue-200 font-bold";
-      else bgClass = "bg-amber-100 text-amber-700 border border-amber-300 font-black shadow-sm";
-    }
+  const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const DAY_NAMES   = ['Як','Дш','Сш','Чш','Пш','Жм','Шн'];
 
-    // Танланган кун
-    if (dateStr === selectedDate) {
-        bgClass += " ring-2 ring-offset-2 ring-indigo-500 z-10 scale-105 transition-transform";
-    }
-
-    days.push(
-      <button 
-        key={d} 
-        onClick={() => onSelectDate(dateStr)} 
-        className={`h-14 rounded-xl flex flex-col items-center justify-center text-sm transition-all active:scale-95 hover:bg-opacity-80 relative ${bgClass}`}
-      >
-        <span>{d}</span>
-        {score !== undefined && <span className="text-[9px] opacity-80">{score}%</span>}
-      </button>
-    );
-  }
-
-  const changeMonth = (delta) => {
-    const newDate = new Date(currentMonth);
-    newDate.setMonth(newDate.getMonth() + delta);
-    setCurrentMonth(newDate);
+  const getScoreColor = (score) => {
+    if (score === undefined) return '';
+    if (score >= 85) return 'bg-amber-400';
+    if (score >= 60) return 'bg-emerald-500';
+    if (score >= 30) return 'bg-blue-400';
+    return 'bg-red-400';
   };
 
-  const monthNames = [
-    "Январ", "Феврал", "Март", "Апрел", "Май", "Июн",
-    "Июл", "Август", "Сентябр", "Октябр", "Ноябр", "Декабр"
-  ];
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
-    <div className={`rounded-2xl p-5 mb-6 animate-in slide-in-from-bottom-4 duration-500 ${theme.card}`}>
-       {/* Header */}
-       <div className="flex items-center justify-between mb-6">
-         <button onClick={() => changeMonth(-1)} className={`p-2 rounded-full hover:bg-black/5 ${theme.text}`}>
-            <ChevronLeft size={24}/>
-         </button>
-         <h2 className={`text-xl font-black uppercase tracking-widest ${theme.text}`}>
-            {monthNames[currentMonth.getMonth()]} <span className="opacity-50">{currentMonth.getFullYear()}</span>
-         </h2>
-         <button onClick={() => changeMonth(1)} className={`p-2 rounded-full hover:bg-black/5 ${theme.text}`}>
-            <ChevronRight size={24}/>
-         </button>
-       </div>
+    <div className={`p-5 rounded-3xl mb-4 ${theme.card}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <button onClick={prevMonth} className={`w-9 h-9 rounded-2xl flex items-center justify-center ${theme.input} opacity-60 hover:opacity-100 transition`}>
+          <ChevronLeft size={18}/>
+        </button>
+        <h3 className={`font-black text-base ${theme.text}`}>
+          {MONTH_NAMES[month]} {year}
+        </h3>
+        <button onClick={nextMonth} className={`w-9 h-9 rounded-2xl flex items-center justify-center ${theme.input} opacity-60 hover:opacity-100 transition`}>
+          <ChevronRight size={18}/>
+        </button>
+      </div>
 
-       {/* Week Days */}
-       <div className="grid grid-cols-7 gap-1 mb-2 text-center text-[10px] font-bold opacity-50 uppercase">
-         <span>Ду</span><span>Се</span><span>Чо</span><span>Па</span><span>Жу</span><span>Ша</span><span>Як</span>
-       </div>
+      {/* Kun nomlari */}
+      <div className="grid grid-cols-7 mb-2">
+        {DAY_NAMES.map(d => (
+          <div key={d} className="text-center text-[9px] font-black opacity-30 uppercase py-1">{d}</div>
+        ))}
+      </div>
 
-       {/* Days Grid */}
-       <div className="grid grid-cols-7 gap-2">
-         {days}
-       </div>
+      {/* Kunlar */}
+      {loading ? (
+        <div className="flex items-center justify-center h-32 opacity-40">
+          <div className="w-6 h-6 rounded-full border-2 border-current border-t-transparent animate-spin"/>
+        </div>
+      ) : (
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((day, i) => {
+            if (!day) return <div key={`empty-${i}`}/>;
+            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const score   = scores[dateStr];
+            const isToday    = dateStr === todayStr;
+            const isSelected = dateStr === selectedDate;
+            const isFuture   = dateStr > todayStr;
+            const dotColor   = getScoreColor(score);
+
+            return (
+              <button
+                key={dateStr}
+                onClick={() => !isFuture && onSelectDate(dateStr)}
+                disabled={isFuture}
+                className={`relative flex flex-col items-center justify-center aspect-square rounded-2xl text-xs font-bold transition-all duration-200 ${
+                  isSelected
+                    ? theme.button + ' text-white scale-105'
+                    : isToday
+                    ? `border-2 ${theme.icon.includes('0D5C') ? 'border-[#0D5C4C]' : theme.icon.includes('C49A') ? 'border-amber-500' : 'border-red-500'} ${theme.text}`
+                    : isFuture
+                    ? 'opacity-20 cursor-not-allowed ' + theme.text
+                    : theme.input + ' hover:opacity-80 ' + theme.text
+                }`}
+              >
+                {day}
+                {score !== undefined && !isSelected && (
+                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${dotColor}`}/>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Legenda */}
+      <div className="flex gap-3 mt-4 justify-center flex-wrap">
+        {[
+          { color: 'bg-amber-400',   label: 'Legend (85+)' },
+          { color: 'bg-emerald-500', label: 'Yaxshi (60+)' },
+          { color: 'bg-blue-400',    label: "O'rta (30+)"  },
+          { color: 'bg-red-400',     label: 'Kam (<30)'    },
+        ].map(({ color, label }) => (
+          <div key={label} className="flex items-center gap-1">
+            <div className={`w-2 h-2 rounded-full ${color}`}/>
+            <span className="text-[9px] opacity-50 font-bold">{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
