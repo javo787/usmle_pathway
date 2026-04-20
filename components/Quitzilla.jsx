@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Shield, AlertTriangle, Zap, Activity, Brain, Plus, Trash2, RefreshCw, X, Wind, Dumbbell, Moon, ChevronRight, Clock } from 'lucide-react';
 
 // ============================================
@@ -73,7 +74,8 @@ function SOSModal({ onClose, theme }) {
   const phaseLabel = { inhale: 'Нафас ол', hold: 'Ушлаб тур', exhale: 'Нафас чиқар' };
   const phaseScale = { inhale: 'scale-110', hold: 'scale-110', exhale: 'scale-90' };
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onPointerDown={onClose}/>
       <div
@@ -181,7 +183,8 @@ function SOSModal({ onClose, theme }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -196,7 +199,8 @@ function RelapseModal({ challenge, onConfirm, onCancel, theme }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div className="absolute inset-0 bg-red-950/90 backdrop-blur-md" onPointerDown={onCancel}/>
       <div
@@ -243,7 +247,8 @@ function RelapseModal({ challenge, onConfirm, onCancel, theme }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -433,7 +438,7 @@ export default function Quitzilla({ challenges = [], onAdd, onReset, onDelete, t
       {showRelapse && <RelapseModal challenge={activeChallenge} onConfirm={handleRelapse} onCancel={() => setShowRelapse(false)} theme={theme}/>}
 
       {/* ADD MODAL */}
-      {showAddModal && (
+      {showAddModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onPointerDown={() => setShowAddModal(false)}/>
           <div className="relative bg-slate-900 border border-slate-700 p-6 rounded-3xl w-full max-w-sm" style={{ zIndex: 1 }} onPointerDown={e => e.stopPropagation()}>
@@ -450,7 +455,8 @@ export default function Quitzilla({ challenges = [], onAdd, onReset, onDelete, t
               <button onPointerDown={handleAdd} className="flex-1 py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm">Бошлаш</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
