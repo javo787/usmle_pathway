@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Home as IconHome, BarChart2, Settings as IconSettings, Save, Wallet, Headphones, X, Check, Flame, Calendar as IconCalendar, Moon, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Home as IconHome, BarChart2, Settings as IconSettings, Save, Wallet, Headphones, X, Check, Flame, Calendar as IconCalendar, Moon, Cloud, CloudOff, Loader } from 'lucide-react';
 import { themes } from '@/lib/themeUtils';
 import { calculateScore, determineMode } from '@/lib/gameLogic';
 
@@ -19,416 +19,439 @@ import DailyFocusLock from '@/components/DailyFocusLock';
 import { useSession } from 'next-auth/react';
 import LoginScreen from '@/components/LoginScreen';
 
+const TODAY = () => new Date().toISOString().split('T')[0];
+
+const EMPTY_DATA = (dateStr) => ({
+  date: dateStr,
+  planning: { schedule: '', prohibitions: '', tomorrowPlans: ['','','','',''], reflection: '' },
+  academic: { firstAidDone: 0, uWorldDone: 0, ankiDone: 0, repetition: false, additionalResource: false },
+  spiritual: {
+    prayersDone: 0, prayers: {}, zikr: false, zikrs: [],
+    tahajjud: false, quranPages: 0, quranNote: '',
+    sleepOnTime: false, nafsRelapse: false, qazoDone: false,
+    zulm: '', sadaqa: false, silaiRahm: false,
+  },
+  english: { essay: '', aiFeedback: '', practiced: false },
+  sport: { type: '', duration: 0, details: '', didSport: false, intensity: '' },
+  penaltyDebt: 0,
+  debtCreatedAt: null,
+});
+
 export default function Home() {
   const { data: session, status } = useSession();
 
   const [view, setView] = useState('journal');
   const [showPodcast, setShowPodcast] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
-  const [showQazoModal, setShowQazoModal] = useState(false); 
-  const [payAmount, setPayAmount] = useState("");
+  const [showQazoModal, setShowQazoModal] = useState(false);
+  const [payAmount, setPayAmount] = useState('');
   const [mode, setMode] = useState('stable');
   const [score, setScore] = useState(0);
   const [isPlanLocked, setIsPlanLocked] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [settings, setSettings] = useState({ 
-    enableNotifications: false, 
-    smallReward: "+50с ҳалол!", bigReward: "Тоғга чиқиш", punishment: "50с Эҳсон" 
+  const [settings, setSettings] = useState({
+    enableNotifications: false,
+    smallReward: '+50с ҳалол!',
+    bigReward: 'Тоғга чиқиш',
+    punishment: '50с Эҳсон',
   });
   const [goals, setGoals] = useState({ firstAid: 15, uWorld: 40, anki: 50 });
-
-  const [data, setData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    planning: { schedule: "", prohibitions: "", tomorrowPlans: ["", "", "", "", ""], reflection: "" },
-    academic: { firstAidDone: 0, uWorldDone: 0, ankiDone: 0, repetition: false, additionalResource: false },
-    spiritual: { 
-      prayersDone: 0, zikr: false, tahajjud: false, quranPages: 0, 
-      sleepOnTime: false, nafsRelapse: false, qazoDone: false,
-      zulm: "", sadaqa: false, silaiRahm: false 
-    },
-    english: { essay: "", aiFeedback: "", practiced: false },
-    sport: { type: "", duration: 0, details: "", didSport: false },
-    penaltyDebt: 0,
-    debtCreatedAt: null,
-  });
-
   const [challenges, setChallenges] = useState([]);
+  const [data, setData] = useState(EMPTY_DATA(TODAY()));
 
-  // --- 1. ЮКЛАШ ---
-  useEffect(() => {
-    const savedChallenges = localStorage.getItem('quitzilla_challenges');
-    if (savedChallenges) setChallenges(JSON.parse(savedChallenges));
-    else {
-      const defaultCh = [{ id: 1, title: "Нафс", start: new Date().toISOString() }];
-      setChallenges(defaultCh);
-      localStorage.setItem('quitzilla_challenges', JSON.stringify(defaultCh));
-    }
-    
-    const savedSettings = localStorage.getItem('journal_settings');
-    if (savedSettings) setSettings(JSON.parse(savedSettings));
-    
-    const savedGoals = localStorage.getItem('journal_goals');
-    if (savedGoals) setGoals(JSON.parse(savedGoals));
-
-    const savedDebt = localStorage.getItem('penalty_debt');
-    const savedDebtDate = localStorage.getItem('debt_created_at');
-    let currentDebt = savedDebt ? parseInt(savedDebt) : 0;
-    let currentDebtDate = savedDebtDate || null;
-
-    // --- АВТОМАТИК ЖАРИМА: КЕЧА РЕЖА ТУЗИЛМАГАНМИ? ---
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yesterdayDate = new Date();
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
-
-    const yesterdayDataJSON = localStorage.getItem(`journal_${yesterdayStr}`);
-    const autoPenaltyKey = `auto_penalty_applied_${todayStr}`;
-    const alreadyApplied = localStorage.getItem(autoPenaltyKey);
-
-    if (!alreadyApplied && yesterdayDataJSON) {
-      const yesterdayData = JSON.parse(yesterdayDataJSON);
-      const hadPlan = yesterdayData.planning?.schedule && yesterdayData.planning.schedule.trim().length > 5;
-      const hadTomorrowTasks = yesterdayData.planning?.tomorrowPlans?.some(t => t && t.trim().length > 2);
-
-      if (!hadPlan && !hadTomorrowTasks) {
-        const PENALTY = 50;
-        currentDebt = currentDebt + PENALTY;
-        const timestamp = currentDebt === PENALTY ? new Date().toISOString() : currentDebtDate;
-        currentDebtDate = timestamp;
-        localStorage.setItem('penalty_debt', currentDebt);
-        if (timestamp) localStorage.setItem('debt_created_at', timestamp);
-        localStorage.setItem(autoPenaltyKey, '1');
-        setTimeout(() => {
-          alert(`⚠️ АВТОМАТИК ЖАРИМА!\n\nКеча (${yesterdayStr}) режа тузилмади.\n\nЖарима: +${PENALTY} сомони қарзга қўшилди!`);
-        }, 1000);
-      } else {
-        localStorage.setItem(autoPenaltyKey, '1');
+  // ── ПРОФИЛ ЮКЛАШ ──────────────────────────────
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await fetch('/api/profile');
+      if (!res.ok) return;
+      const { profile } = await res.json();
+      if (!profile) return;
+      if (profile.settings)           setSettings(profile.settings);
+      if (profile.goals)              setGoals(profile.goals);
+      if (profile.challenges?.length) setChallenges(profile.challenges);
+      if (profile.penaltyDebt != null) {
+        setData(prev => ({
+          ...prev,
+          penaltyDebt:   profile.penaltyDebt || 0,
+          debtCreatedAt: profile.debtCreatedAt || null,
+        }));
       }
-    } else if (!alreadyApplied && !yesterdayDataJSON) {
-      const PENALTY = 50;
-      currentDebt = currentDebt + PENALTY;
-      const timestamp = currentDebt === PENALTY ? new Date().toISOString() : currentDebtDate;
-      currentDebtDate = timestamp;
-      localStorage.setItem('penalty_debt', currentDebt);
-      if (timestamp) localStorage.setItem('debt_created_at', timestamp);
-      localStorage.setItem(autoPenaltyKey, '1');
-      setTimeout(() => {
-        alert(`⚠️ АВТОМАТИК ЖАРИМА!\n\nКеча (${yesterdayStr}) илова очилмади ва режа тузилмади.\n\nЖарима: +${PENALTY} сомони қарзга қўшилди!`);
-      }, 1000);
-    }
-
-    if (currentDebt > 0) {
-      setData(prev => ({ 
-        ...prev, 
-        penaltyDebt: currentDebt,
-        debtCreatedAt: currentDebtDate 
-      }));
-    }
-    
-    loadDataForDate(todayStr);
+    } catch (e) { console.error('loadProfile:', e); }
   }, []);
 
-  // --- 2. DATA HANDLERS ---
-  const loadDataForDate = (dateStr) => {
-    const key = `journal_${dateStr}`;
-    const savedDaily = localStorage.getItem(key);
-    
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = dateStr === todayStr;
-    
-    if (savedDaily) {
-       const parsedData = JSON.parse(savedDaily);
-       setData(prev => ({ ...prev, ...parsedData, date: dateStr }));
+  // ── АВТОМАТИК ЖАРИМА ──────────────────────────
+  const checkAutoPenalty = useCallback(async (todayStr, prevData) => {
+    const key = `auto_penalty_applied_${todayStr}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
 
-       if (isToday && (!parsedData.planning.schedule || parsedData.planning.schedule.trim().length < 5)) {
-         setIsPlanLocked(true);
-       } else {
-         setIsPlanLocked(false);
-       }
-    } else {
-       const d = new Date(dateStr);
-       d.setDate(d.getDate() - 1);
-       const prevDateStr = d.toISOString().split('T')[0];
-       const prevDataJSON = localStorage.getItem(`journal_${prevDateStr}`);
-       
-       let initialSchedule = "";
-       
-       if (prevDataJSON) {
-         const prevData = JSON.parse(prevDataJSON);
-         if (prevData.planning?.tomorrowPlans) {
-           const tasks = prevData.planning.tomorrowPlans.filter(t => t && t.trim().length > 0);
-           if (tasks.length > 0) {
-             initialSchedule = "Кечадан қолган муҳим вазифалар:\n" + tasks.map((t, i) => `${i+1}. ${t}`).join('\n');
-           }
-         }
-       }
+    const hadPlan  = prevData?.planning?.schedule?.trim().length > 5;
+    const hadTasks = prevData?.planning?.tomorrowPlans?.some(t => t?.trim().length > 2);
+    if (hadPlan || hadTasks) return;
 
-       if (isToday && initialSchedule.trim().length < 5) {
-         setIsPlanLocked(true);
-       } else {
-         setIsPlanLocked(false);
-       }
+    const PENALTY = 50;
+    setData(prev => {
+      const newDebt  = (prev.penaltyDebt || 0) + PENALTY;
+      const ts       = prev.penaltyDebt === 0 ? new Date().toISOString() : prev.debtCreatedAt;
+      fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ penaltyDebt: newDebt, debtCreatedAt: ts }),
+      });
+      const yDate = new Date(); yDate.setDate(yDate.getDate()-1);
+      const yStr  = yDate.toISOString().split('T')[0];
+      setTimeout(() => alert(`⚠️ АВТОМАТИК ЖАРИМА!\n\nКеча (${yStr}) режа тузилмади.\n\nЖарима: +${PENALTY} сомони қарзга қўшилди!`), 1000);
+      return { ...prev, penaltyDebt: newDebt, debtCreatedAt: ts };
+    });
+  }, []);
 
-       setData(prev => ({
-         date: dateStr,
-         planning: { schedule: initialSchedule, prohibitions: "", tomorrowPlans: ["", "", "", "", ""], reflection: "" }, 
-         academic: { firstAidDone: 0, uWorldDone: 0, ankiDone: 0, repetition: false, additionalResource: false },
-         spiritual: { 
-           prayersDone: 0, zikr: false, tahajjud: false, quranPages: 0, 
-           sleepOnTime: false, nafsRelapse: false, qazoDone: false,
-           zulm: "", sadaqa: false, silaiRahm: false 
-         },
-         english: { essay: "", aiFeedback: "", practiced: false },
-         sport: { type: "", duration: 0, details: "", didSport: false },
-         penaltyDebt: prev.penaltyDebt,
-         debtCreatedAt: prev.debtCreatedAt 
-       }));
+  // ── КУН МАЪЛУМОТИНИ ЮКЛАШ ────────────────────
+  const loadDataForDate = useCallback(async (dateStr) => {
+    const isToday = dateStr === TODAY();
+    try {
+      const res   = await fetch(`/api/journal?date=${dateStr}`);
+      const saved = await res.json();
+
+      if (saved?.date) {
+        setData(prev => ({ ...prev, ...saved, date: dateStr }));
+        const hasPlan = saved.planning?.schedule?.trim().length > 5;
+        setIsPlanLocked(isToday && !hasPlan);
+      } else {
+        // Янги кун — кечадан ўтказиш
+        const d = new Date(dateStr);
+        d.setDate(d.getDate() - 1);
+        const prevStr = d.toISOString().split('T')[0];
+        let prevData  = null;
+        try {
+          const pr = await fetch(`/api/journal?date=${prevStr}`);
+          prevData = await pr.json();
+        } catch {}
+
+        let initSchedule = '';
+        const tasks = prevData?.planning?.tomorrowPlans?.filter(t => t?.trim()) || [];
+        if (tasks.length) {
+          initSchedule = 'Кечадан қолган муҳим вазифалар:\n' + tasks.map((t,i) => `${i+1}. ${t}`).join('\n');
+        }
+
+        setIsPlanLocked(isToday && initSchedule.trim().length < 5);
+        setData(prev => ({
+          ...EMPTY_DATA(dateStr),
+          planning: { ...EMPTY_DATA(dateStr).planning, schedule: initSchedule },
+          penaltyDebt:   prev.penaltyDebt,
+          debtCreatedAt: prev.debtCreatedAt,
+        }));
+
+        if (isToday) await checkAutoPenalty(dateStr, prevData);
+      }
+    } catch (e) {
+      console.error('loadDataForDate:', e);
+      setData(EMPTY_DATA(dateStr));
+      if (isToday) setIsPlanLocked(true);
     }
-  };
+  }, [checkAutoPenalty]);
 
-  const handleUnlockPlan = (tasks) => {
-    const formattedTasks = tasks.filter(t => t.trim() !== "");
-    const newSchedule = "Бугунги асосий вазифалар:\n" + formattedTasks.map((t, i) => `${i+1}. ${t}`).join('\n');
-    
-    const updatedPlanning = { ...data.planning, schedule: newSchedule };
-    const updatedData = { ...data, planning: updatedPlanning };
-    setData(updatedData);
-    setIsPlanLocked(false);
-
-    localStorage.setItem(`journal_${data.date}`, JSON.stringify({ ...updatedData, score }));
-  };
-
+  // ── БИРИНЧИ ЮКЛАШ ────────────────────────────
   useEffect(() => {
-    const newScore = calculateScore(data, goals);
-    const newMode = determineMode(newScore, data.penaltyDebt);
-    setScore(newScore);
-    setMode(newMode);
+    if (status !== 'authenticated') return;
+    (async () => {
+      setIsLoading(true);
+      await loadProfile();
+      await loadDataForDate(TODAY());
+      setIsLoading(false);
+    })();
+  }, [status, loadProfile, loadDataForDate]);
+
+  // ── SCORE ─────────────────────────────────────
+  useEffect(() => {
+    const s = calculateScore(data, goals);
+    const m = determineMode(s, data.penaltyDebt);
+    setScore(s);
+    setMode(m);
   }, [data, goals]);
 
   const currentTheme = themes[mode];
-
   const updateSection = (section, value) => setData(prev => ({ ...prev, [section]: value }));
 
-  const increaseDebt = (amount) => {
-    setData(prev => {
-      const newDebt = (prev.penaltyDebt || 0) + amount;
-      const timestamp = prev.penaltyDebt === 0 ? new Date().toISOString() : prev.debtCreatedAt;
-      
-      localStorage.setItem('penalty_debt', newDebt);
-      if (timestamp) localStorage.setItem('debt_created_at', timestamp);
-      
-      return { ...prev, penaltyDebt: newDebt, debtCreatedAt: timestamp };
-    });
+  // ── САҚЛАШ ───────────────────────────────────
+  const saveData = async () => {
+    setSyncStatus('saving');
+    try {
+      const res = await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, score, challenges, settings, goals }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setSyncStatus('saved');
+      setTimeout(() => setSyncStatus('idle'), 2500);
+    } catch (e) {
+      console.error('saveData:', e);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
   };
 
+  // ── CHALLENGES ───────────────────────────────
+  const syncChallenges = (updated) => fetch('/api/profile', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challenges: updated }),
+  }).catch(console.error);
+
+  const addCh = (title) => {
+    const ch = { id: Date.now(), title, start: new Date().toISOString(), relapseHistory: [] };
+    const updated = [...challenges, ch];
+    setChallenges(updated);
+    syncChallenges(updated);
+  };
+
+  const resetCh = (id, reason) => {
+    const now = new Date().toISOString();
+    const updated = challenges.map(c => c.id === id
+      ? { ...c, start: now, relapseHistory: [...(c.relapseHistory||[]), { date: now, reason }] }
+      : c);
+    setChallenges(updated);
+    syncChallenges(updated);
+
+    const newDebt = (data.penaltyDebt || 0) + 50;
+    const ts = data.penaltyDebt === 0 ? now : data.debtCreatedAt;
+    setData(prev => ({ ...prev, penaltyDebt: newDebt, debtCreatedAt: ts }));
+    fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ penaltyDebt: newDebt, debtCreatedAt: ts, challenges: updated }),
+    }).catch(console.error);
+    alert(`⚠️ СРЫВ! Жарима +50 сомони.`);
+  };
+
+  const delCh = (id) => {
+    if (!confirm('Ушбу трекерни ўчириб ташлайми?')) return;
+    const updated = challenges.filter(c => c.id !== id);
+    setChallenges(updated);
+    syncChallenges(updated);
+  };
+
+  // ── SETTINGS & GOALS ─────────────────────────
   const updateSettings = (field, value) => {
-    const newSettings = { ...settings, [field]: value };
-    setSettings(newSettings);
-    localStorage.setItem('journal_settings', JSON.stringify(newSettings));
+    const updated = { ...settings, [field]: value };
+    setSettings(updated);
+    fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings: updated }),
+    }).catch(console.error);
   };
 
   const updateGoals = (field, value) => {
-    const newGoals = { ...goals, [field]: value };
-    setGoals(newGoals);
-    localStorage.setItem('journal_goals', JSON.stringify(newGoals));
+    const updated = { ...goals, [field]: value };
+    setGoals(updated);
+    fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goals: updated }),
+    }).catch(console.error);
   };
 
+  // ── ПЛАН ОЧИШ ────────────────────────────────
+  const handleUnlockPlan = (tasks) => {
+    const formatted = tasks.filter(t => t.trim());
+    const schedule  = 'Бугунги асосий вазифалар:\n' + formatted.map((t,i) => `${i+1}. ${t}`).join('\n');
+    const planning  = { ...data.planning, schedule };
+    setData(prev => ({ ...prev, planning }));
+    setIsPlanLocked(false);
+    fetch('/api/journal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, planning, score }),
+    }).catch(console.error);
+  };
+
+  // ── ЖАРИМА ТЎЛАШ ─────────────────────────────
+  const handlePayDebt = () => {
+    const amount  = parseInt(payAmount);
+    if (!amount) return;
+    const newDebt = Math.max(0, data.penaltyDebt - amount);
+    const ts      = newDebt === 0 ? null : data.debtCreatedAt;
+    setData(prev => ({ ...prev, penaltyDebt: newDebt, debtCreatedAt: ts }));
+    fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ penaltyDebt: newDebt, debtCreatedAt: ts }),
+    }).catch(console.error);
+    setPayAmount('');
+    setShowPayModal(false);
+  };
+
+  // ── ҚАЗО НАМОЗ ───────────────────────────────
   const handleSaveCheck = () => {
-    if (data.spiritual.prayersDone < 5 && !data.spiritual.qazoDone) {
+    const prayers = data.spiritual.prayers || {};
+    const missed  = ['fajr','dhuhr','asr','maghrib','isha'].filter(k => !prayers[k]);
+    if (missed.length && !data.spiritual.qazoDone) {
       setShowQazoModal(true);
     } else {
       saveData();
     }
   };
 
-  const confirmQazo = (didPrayQazo) => {
-    if (didPrayQazo) {
-      const updatedSpiritual = { ...data.spiritual, qazoDone: true };
-      const updatedData = { ...data, spiritual: updatedSpiritual };
-      setData(updatedData);
-      localStorage.setItem(`journal_${data.date}`, JSON.stringify({ ...updatedData, score }));
-      alert("✅ Қабул бўлсин! Сақланди.");
-    } else {
-      saveData();
-    }
+  const confirmQazo = (didPray) => {
+    if (didPray) setData(prev => ({ ...prev, spiritual: { ...prev.spiritual, qazoDone: true } }));
     setShowQazoModal(false);
+    saveData();
   };
 
-  const saveData = () => {
-    const dataToSave = { ...data, score };
-    localStorage.setItem(`journal_${data.date}`, JSON.stringify(dataToSave));
-    alert("✅ Маълумотлар сақланди!");
-  };
+  // ── SYNC ИНДИКАТОР ────────────────────────────
+  const SyncIndicator = () => syncStatus === 'idle' ? null : (
+    <div className={`fixed top-4 right-4 z-[60] flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-bold shadow-lg transition-all ${
+      syncStatus === 'saving' ? 'bg-amber-500/20 border border-amber-500/40 text-amber-500' :
+      syncStatus === 'saved'  ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-500' :
+                                'bg-red-500/20 border border-red-500/40 text-red-500'
+    }`}>
+      {syncStatus === 'saving' && <><Loader size={12} className="animate-spin"/> Сақланяпти...</>}
+      {syncStatus === 'saved'  && <><Cloud size={12}/> Сақланди ✓</>}
+      {syncStatus === 'error'  && <><CloudOff size={12}/> Хатолик — қайта уриниш</>}
+    </div>
+  );
 
-  const handlePayDebt = () => {
-    const amount = parseInt(payAmount);
-    if (!amount) return;
-    
-    setData(prev => {
-       const newDebt = Math.max(0, prev.penaltyDebt - amount);
-       const newTimestamp = newDebt === 0 ? null : prev.debtCreatedAt;
-       
-       localStorage.setItem('penalty_debt', newDebt);
-       if (newTimestamp) {
-           localStorage.setItem('debt_created_at', newTimestamp);
-       } else {
-           localStorage.removeItem('debt_created_at');
-       }
-       
-       return { ...prev, penaltyDebt: newDebt, debtCreatedAt: newTimestamp };
-    });
-
-    setPayAmount(""); 
-    setShowPayModal(false);
-  };
-
-  const addCh = (title) => {
-    const newCh = { id: Date.now(), title: title, start: new Date().toISOString() };
-    const updated = [...challenges, newCh];
-    setChallenges(updated);
-    localStorage.setItem('quitzilla_challenges', JSON.stringify(updated));
-  };
-  
-  const resetCh = (id, reason) => {
-    const penalty = 50;
-    increaseDebt(penalty);
-    
-    const updatedChallenges = challenges.map(c => c.id === id ? { ...c, start: new Date().toISOString() } : c);
-    setChallenges(updatedChallenges);
-    localStorage.setItem('quitzilla_challenges', JSON.stringify(updatedChallenges));
-    alert(`⚠️ СРЫВ! Жарима +${penalty} сомони. 24 соатлик таймер ишга тушди!`);
-  };
-  
-  const delCh = (id) => {
-    if(!confirm("Ушбу трекерни ўчириб ташлайми?")) return;
-    const updated = challenges.filter(c => c.id !== id);
-    setChallenges(updated);
-    localStorage.setItem('quitzilla_challenges', JSON.stringify(updated));
-  };
-
-  if (status === "loading") {
+  // ── RENDER ────────────────────────────────────
+  if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-emerald-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-emerald-500"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F0E8] gap-3">
+        <div className="w-12 h-12 rounded-full border-4 border-[#0D5C4C]/20 border-t-[#0D5C4C] animate-spin"/>
+        <p className="text-xs text-[#0D5C4C]/50 font-bold uppercase tracking-widest">Юкланяпти...</p>
       </div>
     );
   }
 
-  if (status === "unauthenticated") {
-    return <LoginScreen />;
-  }
-
-  if (isPlanLocked) {
-    return <DailyFocusLock onUnlock={handleUnlockPlan} />;
-  }
+  if (status === 'unauthenticated') return <LoginScreen />;
+  if (isPlanLocked) return <DailyFocusLock onUnlock={handleUnlockPlan} />;
 
   return (
-    <div className={`min-h-screen pb-24 font-sans transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
-      
-      <header className="p-6 pt-10 pb-4">
-        <div className="flex justify-between items-start mb-4">
-           <div>
-             <div className="flex items-center gap-2 mb-1 opacity-70">
-                <span className="text-xs font-bold uppercase tracking-widest">{data.date}</span>
-             </div>
-             <h1 className="text-xl font-bold italic opacity-90">"Сабр ва Ҳаракат"</h1>
-           </div>
-           
-           {data.penaltyDebt > 0 ? (
-             <button onClick={() => setShowPayModal(true)} className="bg-red-500/20 border border-red-500 rounded-xl p-2 px-3 animate-pulse">
-               <div className="text-[10px] text-red-500 font-bold uppercase flex items-center justify-end">Тўлаш <Wallet size={10} className="ml-1"/></div>
-               <div className="text-xl font-black text-red-600">{data.penaltyDebt} с.</div>
-             </button>
-           ) : (
-             <div className={`border rounded-xl p-2 px-3 flex items-center gap-2 ${mode === 'legend' ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-emerald-500/10 border-emerald-500 text-emerald-600'}`}>
-                {mode === 'legend' ? <Flame size={16} className="text-amber-500 animate-pulse"/> : <Check size={16}/>}
-                <div className="text-[10px] font-bold uppercase">{mode === 'legend' ? 'LEGEND' : 'ТОЗА'}</div>
-             </div>
-           )}
+    <div className={`min-h-screen pb-28 transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
+
+      <SyncIndicator />
+
+      {/* Фон безаклари */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full opacity-[0.06] blur-3xl ${mode === 'critical' ? 'bg-red-500' : mode === 'legend' ? 'bg-amber-400' : 'bg-emerald-500'}`}/>
+        <div className={`absolute top-1/2 -left-24 w-64 h-64 rounded-full opacity-[0.04] blur-3xl ${mode === 'critical' ? 'bg-red-700' : mode === 'legend' ? 'bg-yellow-500' : 'bg-teal-400'}`}/>
+      </div>
+
+      {/* HEADER */}
+      <header className="relative z-10 px-5 pt-12 pb-5">
+        <div className="flex justify-between items-start mb-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{data.date}</p>
+            <h1 className="font-display text-2xl font-bold opacity-90 leading-tight">Сабр ва Ҳаракат</h1>
+            <p className="text-[11px] opacity-40 mt-0.5 font-medium tracking-wide">
+              {mode === 'legend' ? '✦ Афсона режими' : mode === 'critical' ? '⚡ Ҳаракат керак' : '◈ Барқарор'}
+            </p>
+          </div>
+
+          {data.penaltyDebt > 0 ? (
+            <button onClick={() => setShowPayModal(true)} className="bg-red-500/15 border border-red-500/50 rounded-2xl p-3 px-4 animate-breathe">
+              <div className="text-[9px] text-red-400 font-bold uppercase tracking-widest flex items-center justify-end gap-1 mb-0.5">Қарз <Wallet size={9}/></div>
+              <div className="text-2xl font-black text-red-400 font-display">{data.penaltyDebt}с</div>
+            </button>
+          ) : (
+            <div className={`border rounded-2xl p-3 px-4 flex flex-col items-center gap-1 ${mode === 'legend' ? 'bg-amber-500/10 border-amber-400/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600'}`}>
+              {mode === 'legend' ? <Flame size={18} className="animate-float"/> : <Check size={16}/>}
+              <div className="text-[9px] font-black uppercase tracking-widest">{mode === 'legend' ? 'ЛЕГЕНД' : 'ТОЗА'}</div>
+            </div>
+          )}
         </div>
-        <div className={`w-full rounded-full h-4 overflow-hidden border backdrop-blur-sm ${mode==='stable' ? 'bg-gray-200 border-gray-300' : 'bg-white/10 border-white/5'}`}>
-           <div className={`h-full transition-all duration-1000 ease-out relative flex items-center justify-end pr-2 text-[10px] font-bold text-white ${mode === 'critical' ? 'bg-red-600' : mode === 'legend' ? 'bg-amber-400' : 'bg-blue-600'}`} style={{ width: `${Math.max(5, score)}%` }}>{score}%</div>
+
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Кунлик балл</span>
+            <span className={`text-sm font-black ${mode === 'critical' ? 'text-red-400' : mode === 'legend' ? 'text-amber-500' : 'text-emerald-600'}`}>{score}%</span>
+          </div>
+          <div className={`w-full rounded-full h-3 overflow-hidden border ${mode === 'critical' ? 'bg-red-950/50 border-red-900/30' : mode === 'legend' ? 'bg-amber-100 border-amber-200' : 'bg-emerald-50 border-emerald-100'}`}>
+            <div className={`h-full rounded-full progress-bar ${mode === 'critical' ? 'bg-gradient-to-r from-red-700 to-red-500' : mode === 'legend' ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-emerald-600 to-teal-400'}`} style={{ width: `${Math.max(4, score)}%` }}/>
+          </div>
         </div>
+        <div className="ornament-line mt-5"/>
       </header>
 
-      <main className="px-5 space-y-6">
-        
+      {/* MAIN */}
+      <main className="relative z-10 px-5 space-y-4">
         {view === 'journal' && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Quitzilla challenges={challenges} onAdd={addCh} onReset={resetCh} onDelete={delCh} theme={currentTheme} />
-          <DayPlan data={data.planning} updateData={updateSection} theme={currentTheme} />
-          <AcademicBattle data={data.academic} updateData={updateSection} theme={currentTheme} />
-          <SpiritualShield data={data.spiritual} updateData={updateSection} theme={currentTheme} />
-          <EnglishTutor data={data.english} updateData={updateSection} theme={currentTheme} />
-          <SportsTracker data={data.sport} academicData={data.academic} updateData={updateSection} theme={currentTheme} />
-
-          <button onClick={handleSaveCheck} className={`w-full py-4 text-white rounded-2xl font-bold shadow-xl flex items-center justify-center active:scale-95 transition-all mb-6 ${currentTheme.button}`}>
-            <Save size={20} className="mr-2"/> Кунликни Сақлаш
-          </button>
-        </div>
+          <div>
+            <div className="card-enter card-enter-1"><Quitzilla challenges={challenges} onAdd={addCh} onReset={resetCh} onDelete={delCh} theme={currentTheme}/></div>
+            <div className="card-enter card-enter-2"><DayPlan data={data.planning} updateData={updateSection} theme={currentTheme}/></div>
+            <div className="card-enter card-enter-3"><AcademicBattle data={data.academic} updateData={updateSection} theme={currentTheme}/></div>
+            <div className="card-enter card-enter-4"><SpiritualShield data={data.spiritual} updateData={updateSection} theme={currentTheme}/></div>
+            <div className="card-enter card-enter-5"><EnglishTutor data={data.english} updateData={updateSection} theme={currentTheme}/></div>
+            <div className="card-enter card-enter-6"><SportsTracker data={data.sport} academicData={data.academic} updateData={updateSection} theme={currentTheme}/></div>
+            <div className="card-enter card-enter-6 mt-2 mb-6">
+              <button onClick={handleSaveCheck} disabled={syncStatus === 'saving'} className={`w-full py-4 text-white rounded-3xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all ${currentTheme.button} ${syncStatus === 'saving' ? 'opacity-70' : ''}`}>
+                {syncStatus === 'saving' ? <><Loader size={18} className="animate-spin"/> Сақланяпти...</> : <><Save size={18}/> Кунликни Сақлаш</>}
+              </button>
+            </div>
+          </div>
         )}
 
         {view === 'calendar' && (
-            <CalendarView 
-                selectedDate={data.date} 
-                onSelectDate={(d) => { loadDataForDate(d); setView('journal'); }} 
-                theme={currentTheme} 
-            />
+          <CalendarView selectedDate={data.date} onSelectDate={(d) => { loadDataForDate(d); setView('journal'); }} theme={currentTheme}/>
         )}
-
-        {view === 'stats' && <StatsDashboard data={data} goals={goals} challenges={challenges} theme={currentTheme} />}
-        
-        {view === 'settings' && (
-           <Settings 
-             settings={settings} updateSettings={updateSettings}
-             goals={goals} updateGoals={updateGoals}
-             theme={currentTheme} 
-           />
-        )}
-
+        {view === 'stats'    && <StatsDashboard data={data} goals={goals} challenges={challenges} theme={currentTheme}/>}
+        {view === 'settings' && <Settings settings={settings} updateSettings={updateSettings} goals={goals} updateGoals={updateGoals} theme={currentTheme}/>}
       </main>
 
-      <nav className={`fixed bottom-0 left-0 right-0 border-t pb-safe z-40 transition-all duration-700 ${currentTheme.nav}`}>
-        <div className="flex justify-around items-center h-16">
-           <button onClick={()=>setView('journal')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='journal' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><IconHome size={20}/><span className="text-[9px] font-bold mt-1">Журнал</span></button>
-           <button onClick={()=>setView('calendar')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='calendar' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><IconCalendar size={20}/><span className="text-[9px] font-bold mt-1">Тарих</span></button>
-           <button onClick={()=>setView('stats')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='stats' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><BarChart2 size={20}/><span className="text-[9px] font-bold mt-1">Статс</span></button>
-           <button onClick={()=>setView('settings')} className={`flex flex-col items-center p-2 rounded-lg transition ${view==='settings' ? 'scale-110 opacity-100 text-current' : 'opacity-50 hover:opacity-80'}`}><IconSettings size={20}/><span className="text-[9px] font-bold mt-1">Созлама</span></button>
+      {/* NAV */}
+      <nav className={`fixed bottom-0 left-0 right-0 border-t pb-safe z-40 transition-all duration-700 glass ${currentTheme.nav}`}>
+        <div className="flex justify-around items-center h-16 px-2">
+          {[
+            { id: 'journal',  icon: IconHome,     label: 'Журнал'  },
+            { id: 'calendar', icon: IconCalendar,  label: 'Тарих'   },
+            { id: 'stats',    icon: BarChart2,     label: 'Статс'   },
+            { id: 'settings', icon: IconSettings,  label: 'Созлама' },
+          ].map(({ id, icon: Icon, label }) => (
+            <button key={id} onClick={() => setView(id)} className={`flex flex-col items-center p-2 rounded-2xl transition-all duration-300 min-w-[60px] ${view === id ? 'scale-110 opacity-100 font-black' : 'opacity-40 hover:opacity-70'}`}>
+              <Icon size={20}/>
+              <span className="text-[9px] font-bold mt-1 tracking-wide">{label}</span>
+              {view === id && <div className={`w-1 h-1 rounded-full mt-0.5 ${mode === 'critical' ? 'bg-red-400' : mode === 'legend' ? 'bg-amber-400' : 'bg-emerald-500'}`}/>}
+            </button>
+          ))}
         </div>
       </nav>
 
       {showPodcast && <SmartPodcast onClose={() => setShowPodcast(false)} data={data} score={score}/>}
-      
+      <button onClick={() => setShowPodcast(true)} className="fixed bottom-24 left-5 bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-full shadow-xl z-40"><Headphones size={24}/></button>
+
+      {/* ҚАЗО MODAL */}
       {showQazoModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in">
-           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-center shadow-2xl">
-             <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/50">
-               <Moon size={32} className="text-indigo-400" />
-             </div>
-             <h2 className="text-xl font-bold text-white mb-2">Намозлар тўлиқ эмас!</h2>
-             <p className="text-sm text-slate-300 mb-6">
-               Бугун <span className="text-indigo-400 font-bold">{5 - data.spiritual.prayersDone} та</span> намоз кам. 
-               <br/>Қазосини ўқиб қўйдингизми?
-             </p>
-             <div className="grid grid-cols-2 gap-3">
-                 <button onClick={() => confirmQazo(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold hover:bg-slate-700">Йўқ, кейин</button>
-                 <button onClick={() => confirmQazo(true)} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-500">Ҳа, ўқидим</button>
-             </div>
-           </div>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-center shadow-2xl">
+            <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/50">
+              <Moon size={32} className="text-indigo-400"/>
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Намозлар тўлиқ эмас!</h2>
+            <p className="text-sm text-slate-300 mb-6">
+              {Object.values(data.spiritual.prayers || {}).filter(v => !v).length} та намоз кам. Қазосини ўқиб қўйдингизми?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => confirmQazo(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold">Йўқ, кейин</button>
+              <button onClick={() => confirmQazo(true)}  className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Ҳа, ўқидим</button>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* ЖАРИМА ТЎЛАШ */}
       {showPayModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm">
-             <div className="flex justify-between items-center mb-4"><h3 className="text-white font-bold">Қарзни сўндириш</h3><button onClick={()=>setShowPayModal(false)}><X className="text-gray-400"/></button></div>
-             <input type="number" className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 text-lg text-white mb-4" value={payAmount} onChange={e => setPayAmount(e.target.value)}/>
-             <button onClick={handlePayDebt} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Тўладим</button>
-           </div>
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white font-bold">Қарзни сўндириш</h3>
+              <button onClick={() => setShowPayModal(false)}><X className="text-gray-400"/></button>
+            </div>
+            <input type="number" className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 text-lg text-white mb-4" value={payAmount} onChange={e => setPayAmount(e.target.value)}/>
+            <button onClick={handlePayDebt} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Тўладим</button>
+          </div>
         </div>
       )}
-      
-      <button onClick={() => setShowPodcast(true)} className="fixed bottom-24 left-5 bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-full shadow-xl z-40"><Headphones size={24}/></button>
     </div>
   );
 }
