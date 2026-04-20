@@ -74,6 +74,8 @@ let userbot;
   }
 })();
 
+const MASTER_EMAIL = 'javo.nur.2004@gmail.com';
+
 console.log(`🤖 "Medical Brother" (v3.0 - Hardcore) ишга тушди...`);
 
 // ==========================================
@@ -154,7 +156,7 @@ cron.schedule('0 6 * * *', async () => {
 
 cron.schedule('0 22 * * *', async () => {
   const date = new Date().toISOString().split('T')[0];
-  const log = await DayLog.findOne({ date });
+  const log = await DayLog.findOne({ userId: MASTER_EMAIL, date });
   if (!log || (log.score || 0) < 50) {
     await bot.sendMessage(CONFIG.adminId, `😡 **Жавоҳир!**\n\nСоат 22:00 бўлди, натижа 50% дан паст. Иловага кириб вазифаларни белгила ёки эртага қарздор бўласан!`, { parse_mode: 'Markdown' });
   }
@@ -173,7 +175,7 @@ bot.onText(/\/start/, (msg) => {
 // Статус
 bot.onText(/📊 Статус/, async (msg) => {
   if (msg.from.id.toString() !== CONFIG.adminId) return;
-  const log = await DayLog.findOne({ date: new Date().toISOString().split('T')[0] });
+  const log = await DayLog.findOne({ userId: MASTER_EMAIL, date: new Date().toISOString().split('T')[0] });
   const debt = log?.penaltyDebt || 0;
   bot.sendMessage(msg.chat.id, `📅 **${new Date().toISOString().split('T')[0]}**\n📈 Балл: ${log?.score || 0}%\n💰 Қарз: ${debt} с.`, { parse_mode: 'Markdown' });
 });
