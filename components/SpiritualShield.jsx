@@ -1,6 +1,7 @@
 
 'use client';
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Heart, Moon, MessageCircle, Clock, BookOpen, Star, X, Plus, Minus, Check } from 'lucide-react';
 
 const PRAYERS = [
@@ -47,7 +48,8 @@ function ZikrModal({ zikrs, onClose, onUpdate, theme }) {
   const bgColor = theme.card.includes('1A0F') ? 'bg-[#1A1210]' : theme.card.includes('white/90') ? 'bg-[#FBF6EC]' : 'bg-white';
   const borderColor = theme.card.includes('red') ? 'border-red-800/30' : theme.card.includes('E8C9') ? 'border-amber-200/50' : 'border-emerald-100';
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 9999 }}>
       {/* Backdrop */}
       <div
@@ -148,7 +150,8 @@ function ZikrModal({ zikrs, onClose, onUpdate, theme }) {
           ><Plus size={18}/></button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -172,7 +175,8 @@ function QuranModal({ data, onClose, onUpdate, theme }) {
   const bgColor = theme.card.includes('1A0F') ? 'bg-[#1A1210]' : theme.card.includes('white/90') ? 'bg-[#FBF6EC]' : 'bg-white';
   const borderColor = theme.card.includes('red') ? 'border-red-800/30' : theme.card.includes('E8C9') ? 'border-amber-200/50' : 'border-emerald-100';
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 9999 }}>
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -219,7 +223,8 @@ function QuranModal({ data, onClose, onUpdate, theme }) {
           ✓ Сақлаш
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
