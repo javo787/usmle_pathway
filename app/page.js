@@ -22,16 +22,43 @@ import { useSession } from 'next-auth/react';
 import LoginScreen from '@/components/LoginScreen';
 
 const TODAY = () => new Date().toISOString().split('T')[0];
-
+ 
 const EMPTY_DATA = (dateStr) => ({
   date: dateStr,
-  planning: { schedule: '', prohibitions: '', tomorrowPlans: ['','','','',''], reflection: '' },
-  academic: { firstAidDone: 0, uWorldDone: 0, ankiDone: 0, repetition: false, additionalResource: false },
+  planning: {
+    schedule: '',
+    prohibitions: '',
+    tomorrowPlans: ['', '', '', '', ''],
+    reflection: '',
+  },
+  academic: {
+    // Немецкий язык
+    germanMinutes: 0,
+    germanPractice: false,      // говорил вслух / с репетитором
+    // Университет / кафедра
+    uniHours: 0,
+    clinicVisit: false,         // был в нейрохир. отделении
+    researchMeeting: false,     // встреча с науч. руководителем
+    // Anki
+    ankiDone: 0,
+    ankiRepetition: false,
+    // Публикация / статья
+    pubHours: 0,
+  },
   spiritual: {
-    prayersDone: 0, prayers: {}, zikr: false, zikrs: [],
-    tahajjud: false, quranPages: 0, quranNote: '',
-    sleepOnTime: false, nafsRelapse: false, qazoDone: false,
-    zulm: '', sadaqa: false, silaiRahm: false,
+    prayersDone: 0,
+    prayers: {},
+    zikr: false,
+    zikrs: [],
+    tahajjud: false,
+    quranPages: 0,
+    quranNote: '',
+    sleepOnTime: false,
+    nafsRelapse: false,
+    qazoDone: false,
+    zulm: '',
+    sadaqa: false,
+    silaiRahm: false,
   },
   english: { essay: '', aiFeedback: '', practiced: false },
   sport: { type: '', duration: 0, details: '', didSport: false, intensity: '' },
@@ -59,7 +86,11 @@ export default function Home() {
     bigReward: 'Тоғга чиқиш',
     punishment: '50с Эҳсон',
   });
-  const [goals, setGoals] = useState({ firstAid: 15, uWorld: 40, anki: 50 });
+  const [goals, setGoals] = useState({
+  germanMinutes: 45,   // мин немецкого в день
+  anki: 50,            // карточек Anki
+  uniHours: 4,         // часов учёбы/кафедры
+});
   const [challenges, setChallenges] = useState([]);
   const [data, setData] = useState(EMPTY_DATA(TODAY()));
 
