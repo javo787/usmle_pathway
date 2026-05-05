@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // ================================================
-// Gemini helper — точно как в оригинале
+// Gemini helper
 // ================================================
 const GEMINI_URL = (key) =>
   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
@@ -26,17 +26,41 @@ function parseJSON(text) {
 // Контекст студента
 // ================================================
 const STUDENT_CONTEXT = `
-Студент: Жаво, 21 йош, 4-курс тиббиёт (Душанбе).
+Студент: Жавохир, 21 ёш, 4-курс тиббиёт (Душанбе).
 Мақсад: Германияда нейрохирург бўлиш (Facharzt 2029–2035).
-Стратегия: Немецкий A1→C1, Anki (тиббий), кафедрада тадқиқот, мақолалар (PubMed), ёз 2025 Hospitation Германияда.
+Стратегия: Немецкий A1→C1, Anki (тиббий), кафедрада тадқиқот, мақолалар (PubMed), ёз 2027 Hospitation Германияда.
 Дин: Мусулмон, намоз ўқийди.
 `;
 
+const SYSTEM_PROMPT = `Сен Жаво учун шахсий AI коуч — у 4-курс тиббиёт студенти, нейрохирург бўлишни мақсад қилган.
+
+Унинг стратегияси:
+- Германияда Facharzt нейрохирургия олиш (2029–2035)
+- Ҳозир немецкий ўрганяпти (A1-A2), мақсад B2 → C1 Medizin
+- Anki билан тиббий атамалар ўрганади
+- Кафедрада илмий тадқиқотда иштирок этади
+- Мақолалар ёзяпти (PubMed indexed)
+- Лето 2027-да Германияда Hospitation режалаштираяпти
+- Мусулмон, намоз ўқийди, рўзаларга риоя қилади
+
+Коучинг стили:
+- Қисқа, аниқ, реалистик
+- Ўзбек Кирилл тилида жавоб бер
+- Уни мақта эмас — конкрет маслаҳат бер
+- Агар план сустлигини кўрсанг — очиқ айт`;
+
+// ================================================
+// ЕДИНСТВЕННЫЙ POST обработчик
+// ================================================
 export async function POST(req) {
   try {
-    const { type, data } = await req.json();
+    const body = await req.json();
+    const { type, data, userMessage, language } = body;
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY топилмади' }, { status: 500 });
+
+    if (!apiKey) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY топилмади' }, { status: 500 });
+    }
 
     let prompt = '';
 
@@ -57,9 +81,8 @@ ${STUDENT_CONTEXT}
 - Қўшимча: "${data?.userInput || ''}"
 JSON форматда жавоб бер:
 { "score": <1-10>, "good": "<Ўзбек>", "bad": "<Ўзбек>", "tomorrow": "<Ўзбек>" }`;
-    }
 
-    else if (type === 'plan') {
+    } else if (type === 'plan') {
       prompt = `
 Сен Germany Path учун продуктивлик стратегисан.
 ${STUDENT_CONTEXT}
@@ -67,24 +90,26 @@ ${STUDENT_CONTEXT}
 Жадвал: ${data?.schedule || 'йўқ'}
 Тақиқлар: ${data?.prohibitions || 'йўқ'}
 Вазифалар: ${JSON.stringify(data?.tomorrowPlans?.filter(t => t?.trim()) || [])}
+Натижалар бугун:
+- Немецкий: ${data?.germanMinutes || 0} мин ${data?.germanPractice ? '(гаплашдим)' : ''}
+- Anki: ${data?.ankiDone || 0} карта
+- Универ: ${data?.uniHours || 0} соат ${data?.clinicVisit ? '(отделенияда)' : ''}
+- Мақола: ${data?.pubHours || 0} соат
 JSON: { "rating": "<X/10>", "critique": "<Ўзбек>", "suggestion": "<Ўзбек>" }`;
-    }
 
-    else if (type === 'chat') {
+    } else if (type === 'chat') {
       prompt = `
-Сен нейрохирургия йўлидаги талабанинг AI мураббийсан.
-${STUDENT_CONTEXT}
-Савол: "${data?.userInput}"
+${SYSTEM_PROMPT}
+Савол: "${userMessage || data?.userInput || ''}"
 Қисқа, лўнда жавоб (Ўзбек Кирилл, 3-5 жумла).
 JSON: { "text": "<жавоб>" }`;
-    }
 
-    else if (type === 'language') {
+    } else if (type === 'language') {
       const langMap = { english: 'English', german: 'German (Deutsch)', arabic: 'Arabic (العربية)' };
-      const lang = langMap[data?.selectedLang] || 'German (Deutsch)';
+      const lang = langMap[language || data?.selectedLang] || 'German (Deutsch)';
       prompt = `
 You are a strict ${lang} tutor for a medical student targeting Germany.
-Student wrote: "${data?.userInput || ''}"
+Student wrote: "${userMessage || data?.userInput || ''}"
 JSON only:
 {
   "level": "<CEFR>",
@@ -94,13 +119,12 @@ JSON only:
   "newWord": "<medical word in ${lang}>",
   "newWordMeaning": "<Ўзбекча>"
 }`;
-    }
 
-    else if (type === 'podcast') {
+    } else if (type === 'podcast') {
       prompt = `
 You are an Islamic Medical Mentor for a student targeting neurosurgery in Germany.
 ${STUDENT_CONTEXT}
-Current state: Mood ${data.mood}/5, Energy ${data.energy}/5, Score ${data.score}%, Debt ${data.penaltyDebt} somoni.
+Current state: Mood ${data?.mood}/5, Energy ${data?.energy}/5, Score ${data?.score}%, Debt ${data?.penaltyDebt} somoni.
 German today: ${data?.academic?.germanMinutes || 0} min, Anki: ${data?.academic?.ankiDone || 0} cards.
 Recommend ONE specific topic to listen to now (motivational OR educational).
 JSON only:
@@ -109,15 +133,46 @@ JSON only:
   "reason": "Empathetic advice — Uzbek Cyrillic.",
   "searchQuery": "YouTube search query in English"
 }`;
-    }
 
-    else {
+    } else if (type === 'daily_report') {
+      // Специальный тип для ночного AI-анализа ответов на почасовые вопросы
+      prompt = `
+${SYSTEM_PROMPT}
+Бугун ${data?.date || 'бугун'} кун давомида Жаво ҳар соатда "Нима қилавоссиз? Максад томон кетавоссизми?" деган саволга жавоб берди.
+
+Жавоблар тарихи:
+${(data?.hourlyResponses || []).map((r, i) => `${r.time}: "${r.text}"`).join('\n')}
+
+Умумий кун статистикаси:
+- Балл: ${data?.score || 0}%
+- Немецкий: ${data?.academic?.germanMinutes || 0} мин
+- Anki: ${data?.academic?.ankiDone || 0} карта
+- Намоз: ${data?.spiritual?.prayersDone || 0}/5
+- Спорт: ${data?.sport?.didSport ? 'Ҳа' : 'Йўқ'}
+
+Ушбу жавоблар асосида чуқур таҳлил қил:
+1. Унинг кун давомидаги психологик ҳолати ва энергияси қандай ўзгарди?
+2. У ҳақиқатда максад сари кетдими ёки бош айлантирдими?
+3. Энг яхши ва энг сустлик соатлари қайси эди?
+4. Эртага нима ўзгартириш керак? Конкрет план бер.
+5. Мотивациянавий якуний сўз.
+
+Ўзбек Кирилл тилида, реал ва қаттиққўл лекин меҳрибон тарзда жавоб бер. Формат — текст, JSON эмас.`;
+
+    } else {
       return NextResponse.json({ error: 'Нотўғри тип' }, { status: 400 });
     }
 
     const raw = await callGemini(apiKey, prompt);
+
+    // Для daily_report возвращаем текст напрямую
+    if (type === 'daily_report') {
+      return NextResponse.json({ result: raw.replace(/```/g, '').trim() });
+    }
+
     const result = parseJSON(raw);
-    return NextResponse.json(result);
+    // Совместимость: поддерживаем и { result } и прямой объект
+    return NextResponse.json({ result: result.text || JSON.stringify(result), ...result });
 
   } catch (err) {
     console.error('AI Coach Error:', err);
