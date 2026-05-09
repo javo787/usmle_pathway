@@ -18,26 +18,26 @@ module.exports = (bot, { callGemini }) => {
         `Медицина студентининг бугунги жавоблари:\n${list}\nАнки: ${log.academic?.ankiDone || 0}, Намоз: ${log.spiritual?.prayersDone || 0}/5\nЎзбек кирилл, 5-7 жумла: нима яхши, нима ёмон, эртага нима қилсин.`
       );
 
-      // Экранируем ИИ‑ответ, оставляя заголовок жирным
-      const header = '🧠 *AI Таҳлил:*';
-      const escapedAnalysis = escapeMarkdown(analysis);
-      const fullText = `${header}\n\n${escapedAnalysis}`;
+      // Удаляем сообщение-заглушку
+      await bot.deleteMessage(tgId, loading.message_id).catch(() => {});
 
+      // Формируем ответ: первая строка с заголовком, остальное — экранированный текст
+      const header = '🧠 AI Таҳлил:';
+      const escaped = escapeMarkdown(analysis);  // на всякий случай, если будем слать без Markdown
+      const fullText = header + '\n\n' + escaped + '
+
+';
       const parts = splitMessage(fullText);
 
-      await bot.editMessageText(parts[0], {
-        chat_id: msg.chat.id,
-        message_id: loading.message_id,
-        parse_mode: 'Markdown'
-      });
-
-      for (let i = 1; i < parts.length; i++) {
-        await safeSend(bot, tgId, parts[i]);
+      // Отправляем все части как новые сообщения без Markdown
+      for (const part of parts) {
+        await safeSend(bot, tgId, part, { parse_mode: undefined }); // принудительно без парсинга
         await new Promise(r => setTimeout(r, 300));
       }
     } catch (e) {
       console.error('aiAnalysis error:', e.message);
-      await bot.editMessageText('⚠️ AI хато.', { chat_id: msg.chat.id, message_id: loading.message_id });
+      await bot.deleteMessage(tgId, loading.message_id).catch(() => {});
+      await safeSend(bot, tgId, '⚠️ AI хато.');
     }
   });
 };
