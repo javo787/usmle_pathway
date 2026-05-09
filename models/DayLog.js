@@ -55,7 +55,12 @@ const DayLogSchema = new mongoose.Schema({
   warning20hSent: { type: Boolean, default: false },
   nukeTriggered:  { type: Boolean, default: false },
 
+  planLockedAt:               { type: Date,    default: null  },
+  planDeadlinePenaltyApplied: { type: Boolean, default: false },
+
   score:       { type: Number, default: 0 },
+
+  
   lastUpdated: { type: Date,   default: Date.now },
 }, { timestamps: true, strict: false }); // strict:false - qo'shimcha fieldlar ham saqlanadi
 
