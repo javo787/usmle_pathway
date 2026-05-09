@@ -87,6 +87,40 @@ function setupCallbackHandler(bot) {
       }
     }
 
+      // --- Антирелапс: anti_safe_read, anti_safe_sleep, anti_danger ---
+else if (data.startsWith('anti_')) {
+  const subtype = data.replace('anti_', '');
+
+  if (subtype === 'safe_read' || subtype === 'safe_sleep') {
+    await bot.answerCallbackQuery(query.id, { text: 'Барака топинг! Ўзингизни асранг.' });
+    await bot.editMessageText(
+      `✅ *Яхши танлов!*\n` +
+      `Бу соатларни фойдали ўтказиш — катта ютуқ. Давом этинг.`,
+      {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        parse_mode: 'Markdown'
+      }
+    );
+  } else if (subtype === 'danger') {
+    await bot.answerCallbackQuery(query.id, { text: 'Тўхтанг, бу йўл яхши эмас.' });
+    const advice =
+      `💪 *ТЎХТАНГ!*\n\n` +
+      `Ҳозир дарҳол:\n` +
+      `1. Телефонни ёнга қўйинг\n` +
+      `2. Таҳорат олинг\n` +
+      `3. 2 ракаат намоз ўқинг\n` +
+      `4. Ётиб ухланг\n\n` +
+      `_Нейрохирург бўлиш учун мия тиниқлиги керак._\n` +
+      `_Бу йўлни тарк этинг._`;
+    await bot.editMessageText(advice, {
+      chat_id: query.message.chat.id,
+      message_id: query.message.message_id,
+      parse_mode: 'Markdown'
+    });
+  }
+}
+
     // Неизвестный callback
     else {
       await bot.answerCallbackQuery(query.id, { text: 'Номаълум буйруқ.' });
