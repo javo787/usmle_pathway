@@ -22,4 +22,10 @@ const mainKeyboard = {
   }
 };
 
-module.exports = { safeSend, getMasterEmail, isAllowed, mainKeyboard };
+
+// utils/telegram.js
+function escapeMarkdown(text) {
+  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+}
+
+module.exports = { safeSend, getMasterEmail, isAllowed, mainKeyboard, escapeMarkdown };
