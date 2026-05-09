@@ -2,6 +2,7 @@ const { safeSend, getMasterEmail } = require('../utils/telegram');
 const { getOrCreateLog } = require('../utils/dbHelpers');
 const { getTimeLeft } = require('../utils/dates');
 const { CONFIG } = require('../config');
+const UserProfile = require('../models/UserProfile');
 
 function setupCallbackHandler(bot) {
   bot.on('callback_query', async (query) => {
@@ -118,6 +119,29 @@ else if (data.startsWith('anti_')) {
       message_id: query.message.message_id,
       parse_mode: 'Markdown'
     });
+  }
+}
+
+  // --- Умный будильник: wakeup_<время> ---
+else if (data.startsWith('wakeup_')) {
+  const time = data.replace('wakeup_', '');
+  try {
+    await UserProfile.updateOne(
+      { masterEmail },
+      { $set: { wakeUpTime: time } }
+    );
+    await bot.answerCallbackQuery(query.id, { text: `✅ Уйғониш вақти ${time} қилиб белгиланди.` });
+    await bot.editMessageText(
+      `⏰ *Янги ҳафта учун уйғониш вақти: ${time}*\nЭртага шу вақтда хабар юбораман.`,
+      {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        parse_mode: 'Markdown'
+      }
+    );
+  } catch (e) {
+    console.error('wakeup update error:', e.message);
+    await bot.answerCallbackQuery(query.id, { text: 'Хатолик юз берди.' });
   }
 }
 
