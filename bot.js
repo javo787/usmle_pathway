@@ -16,7 +16,8 @@ const CONFIG = {
   // Telegram ID -> masterEmail маппинг (синхронизирован с getMasterEmail.js сайта)
   userMap: {
     [process.env.TELEGRAM_USER_ID]: 'javo.nur.2004@gmail.com',  // Жаво
-    '8383611951': 'javo.nur.2004@gmail.com',                     // Партнёр — тот же аккаунт!
+    '8383611951': 'javo.nur.2004@gmail.com',
+    '5909296696': 'javo.nur.2004@gmail.com',   // Партнёр — тот же аккаунт!
   },
   mongoUri: process.env.MONGODB_URI,
   geminiKey: process.env.GEMINI_API_KEY,
