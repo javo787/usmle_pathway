@@ -1,21 +1,7 @@
 const { safeSend, isAllowed, getMasterEmail } = require('../../utils/telegram');
 const { CONFIG } = require('../../config');
 const { getOrCreateLog } = require('../../utils/dbHelpers');
-
-function getTimeLeft(createdAt) {
-  const now = new Date();
-  const deadline = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
-  const diff = deadline - now;
-  if (diff <= 0) return { expired: true, text: '0 соат 0 дақиқа' };
-  const hours = Math.floor(diff / 3600000);
-  const minutes = Math.floor((diff % 3600000) / 60000);
-  return {
-    expired: false,
-    hours,
-    minutes,
-    text: `${hours} соат ${minutes} дақиқа`,
-  };
-}
+const { getTimeLeft } = require('../../utils/dates');
 
 module.exports = (bot) => {
   bot.onText(/💰 Қарз/, async (msg) => {
