@@ -341,7 +341,7 @@ export default function Home() {
       syncStatus === 'saved'  ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-500' :
                                 'bg-red-500/20 border border-red-500/40 text-red-500'
     }`}>
-      {syncStatus === 'saving' && <><Loader size={12} className="animate-spin"/> Сақланяпти...</>}
+      {syncStatus === 'saving' && <><Loader size={12} className="animate-spin"/> Сақланавотти...</>}
       {syncStatus === 'saved'  && <><Cloud size={12}/> Сақланди ✓</>}
       {syncStatus === 'error'  && <><CloudOff size={12}/> Хатолик — қайта уриниш</>}
     </div>
@@ -352,7 +352,7 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F0E8] gap-3">
         <div className="w-12 h-12 rounded-full border-4 border-[#0D5C4C]/20 border-t-[#0D5C4C] animate-spin"/>
-        <p className="text-xs text-[#0D5C4C]/50 font-bold uppercase tracking-widest">Юкланяпти...</p>
+        <p className="text-xs text-[#0D5C4C]/50 font-bold uppercase tracking-widest">Юкланавотти...</p>
       </div>
     );
   }
@@ -420,7 +420,7 @@ export default function Home() {
             <div className="card-enter card-enter-6"><MoneyWidget theme={currentTheme} onOpenMoney={() => setView('money')}/></div>
             <div className="card-enter card-enter-6 mt-2 mb-6">
               <button onClick={handleSaveCheck} disabled={syncStatus === 'saving'} className={`w-full py-4 text-white rounded-3xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all ${currentTheme.button} ${syncStatus === 'saving' ? 'opacity-70' : ''}`}>
-                {syncStatus === 'saving' ? <><Loader size={18} className="animate-spin"/> Сақланяпти...</> : <><Save size={18}/> Кунликни Сақлаш</>}
+                {syncStatus === 'saving' ? <><Loader size={18} className="animate-spin"/> Сақланавотти...</> : <><Save size={18}/> Кунликни Сақлаш</>}
               </button>
             </div>
           </div>
