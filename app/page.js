@@ -191,9 +191,21 @@ export default function Home() {
     if (status !== 'authenticated') return;
     (async () => {
       setIsLoading(true);
-      await loadProfile();
-      await loadDataForDate(TODAY());
-      setIsLoading(false);
+      try {
+        await Promise.race([
+          (async () => {
+            await loadProfile();
+            await loadDataForDate(TODAY());
+          })(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 15000)
+          ),
+        ]);
+      } catch (err) {
+        console.error('Load error:', err.message);
+      } finally {
+        setIsLoading(false);
+      }
     })();
   }, [status, loadProfile, loadDataForDate]);
 
