@@ -2,13 +2,17 @@ const cron = require('node-cron');
 const { CONFIG, ALLOWED_TG_IDS } = require('../config');
 const { getTashkentDate, getToday, DAY_NAMES } = require('../utils/dates');
 const { safeSend } = require('../utils/telegram');
-const UserProfile = require('../models/UserProfile');
-const DayLog = require('../models/DayLog');
+let UserProfile, DayLog;
+async function getModels() {
+    if (!UserProfile) UserProfile = (await import('../models/UserProfile.js')).default;
+    if (!DayLog) DayLog = (await import('../models/DayLog.js')).default;
+}
 
 function scheduleMorningGreeting(bot) {
   // Проверяем каждую минуту, нужно ли отправить приветствие
   cron.schedule('* * * * *', async () => {
-    const now = getTashkentDate();
+    await getModels();
+const now = getTashkentDate();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const today = getToday();
