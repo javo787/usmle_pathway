@@ -1,9 +1,20 @@
-const DayLog = require('../models/DayLog');
-const UserProfile = require('../models/UserProfile');
+// динамический импорт ES-модулей из CommonJS
+let DayLog, UserProfile;
+async function getModels() {
+    if (!DayLog) {
+        const dl = await import('../models/DayLog.js');
+        DayLog = dl.default;
+    }
+    if (!UserProfile) {
+        const up = await import('../models/UserProfile.js');
+        UserProfile = up.default;
+    }
+}
 const { getToday } = require('./dates');
 
 async function getOrCreateLog(masterEmail) {
-  const date = getToday();
+    await getModels();
+    const date = getToday();
   let log = await DayLog.findOne({ userId: masterEmail, date });
   if (!log) {
     log = new DayLog({
@@ -18,8 +29,9 @@ async function getOrCreateLog(masterEmail) {
 }
 
 async function syncDebtToProfile(masterEmail, penaltyDebt, debtCreatedAt) {
-  try {
-    await UserProfile.findOneAndUpdate(
+    await getModels();
+    try {
+        await UserProfile.findOneAndUpdate(
       { masterEmail },
       { $set: { penaltyDebt, debtCreatedAt: debtCreatedAt || null } },
       { upsert: true }
