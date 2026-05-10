@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 const connectDB = require('./db/connection');
