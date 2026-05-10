@@ -62,7 +62,7 @@ export default function StatsDashboard({ data, score, goals, challenges, theme }
         </div>
         <div className="text-center p-4 rounded-2xl bg-white/5 border border-white/10">
           <TrendingUp className="mx-auto mb-2 text-blue-500" size={28} />
-          <div className={`text-3xl font-black ${theme.text}`}>{data.score || 0}%</div>
+          <div className={`text-3xl font-black ${theme.text}`}>{score || 0}%</div>
           <div className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Score</div>
         </div>
       </div>
