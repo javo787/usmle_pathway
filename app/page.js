@@ -377,7 +377,12 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F0E8] gap-3">
         <div className="w-12 h-12 rounded-full border-4 border-[#0D5C4C]/20 border-t-[#0D5C4C] animate-spin"/>
-        <p className="text-xs text-[#0D5C4C]/50 font-bold uppercase tracking-widest">Юкланавотти...</p>
+        <p className="text-xs text-[#0D5C4C]/50 font-bold uppercase tracking-widest">
+          Юкланавотти... ({status})
+        </p>
+        <p className="text-xs text-red-400">
+          isLoading: {String(isLoading)}
+        </p>
       </div>
     );
   }
