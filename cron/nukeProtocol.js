@@ -1,10 +1,14 @@
 const cron = require('node-cron');
 const { CONFIG, ALLOWED_TG_IDS } = require('../config');
 const { safeSend, getMasterEmail } = require('../utils/telegram');
-const DayLog = require('../models/DayLog');
+let DayLog;
+async function getModels() {
+    if (!DayLog) DayLog = (await import('../models/DayLog.js')).default;
+}
 
 function scheduleNukeProtocol(bot, userbot) {
   cron.schedule('*/30 * * * *', async () => {
+    await getModels();
     try {
       const now = new Date();
       const debtors = await DayLog.find({
