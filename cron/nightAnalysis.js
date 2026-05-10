@@ -2,13 +2,17 @@ const cron = require('node-cron');
 const { CONFIG, ALLOWED_TG_IDS } = require('../config');
 const { safeSend, escapeMarkdown } = require('../utils/telegram');
 const { getToday } = require('../utils/dates');
-const DayLog = require('../models/DayLog');
+let DayLog;
+async function getModels() {
+    if (!DayLog) DayLog = (await import('../models/DayLog.js')).default;
+}
 const splitMessage = require('../utils/splitMessage');
 const { getCurrentLevel } = require('../utils/streakLevels');
 
 function scheduleNightAnalysis(bot, callGemini) {
   cron.schedule('5 22 * * *', async () => {
     const masterEmail = 'javo.nur.2004@gmail.com';
+    await getModels();
     try {
       const log = await DayLog.findOne({ userId: masterEmail, date: getToday() });
 
