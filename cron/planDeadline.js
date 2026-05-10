@@ -3,12 +3,16 @@ const { CONFIG, ALLOWED_TG_IDS } = require('../config');
 const { getToday } = require('../utils/dates');
 const { safeSend, getMasterEmail } = require('../utils/telegram');
 const { getOrCreateLog, syncDebtToProfile } = require('../utils/dbHelpers');
-const DayLog = require('../models/DayLog');
+let DayLog;
+async function getModels() {
+    if (!DayLog) DayLog = (await import('../models/DayLog.js')).default;
+}
 
 function schedulePlanDeadline(bot) {
   // 9:00 — предупреждение
   cron.schedule('0 9 * * *', async () => {
     const masterEmail = 'javo.nur.2004@gmail.com';
+    await getModels();
     try {
       const log = await DayLog.findOne({ userId: masterEmail, date: getToday() });
       const hasPlanned = log?.planning?.schedule?.trim().length > 5 ||
