@@ -21,7 +21,7 @@ const ProgressBar = ({ label, value, max, color }) => {
   );
 };
 
-export default function StatsDashboard({ data, goals, challenges, theme }) {
+export default function StatsDashboard({ data, score, goals, challenges, theme }) {
   const [maxStreak, setMaxStreak] = useState(0);
 
   useEffect(() => {
