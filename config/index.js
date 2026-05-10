@@ -14,6 +14,6 @@ const CONFIG = {
   timezone: "Asia/Tashkent",
 };
 
-const ALLOWED_TG_IDS = Object.keys(CONFIG.userMap).filter(Boolean);
+const ALLOWED_TG_IDS = Object.keys(CONFIG.userMap).filter(k => k && k !== 'undefined');
 
 module.exports = { CONFIG, ALLOWED_TG_IDS };
