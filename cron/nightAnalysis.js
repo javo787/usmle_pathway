@@ -39,7 +39,22 @@ function scheduleNightAnalysis(bot, callGemini) {
         .map(r => `• ${r.time} — "${r.text}"`)
         .join('\n');
 
-      const prompt = `Сен Жавоҳирнинг шахсий AI-коучисан. ...`; // оставьте ваш полный промпт
+      const prompt = `Сен Жавоҳирнинг шахсий AI-коучисан.
+Бугунги соатлик жавоблар:
+${responsesList}
+Anki: ${log.academic?.ankiDone||0}, Намоз: ${log.spiritual?.prayersDone||0}/5, Балл: ${log.score||0}%
+
+JSON ФАҚАТ (бошқа матн йўқ):
+{
+  "score": <1-10>,
+  "mood_curve": "<кун давомида руҳий ҳолат қандай ўзгарди>",
+  "peak_hours": "<энг самарали соатлар>",
+  "low_hours": "<энг сустлик соатлари>",
+  "real_progress": "<ҳақиқий прогресс борми>",
+  "problems": "<асосий муаммолар>",
+  "tomorrow_plan": "<эртага нима қилиш керак>",
+  "motivation": "<қисқа мотивация>"
+}`;
 
       const raw = await callGemini(prompt);
       let analysis;
