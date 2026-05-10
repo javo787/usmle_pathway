@@ -2,13 +2,16 @@ const cron = require('node-cron');
 const { CONFIG, ALLOWED_TG_IDS } = require('../config');
 const { safeSend } = require('../utils/telegram');
 const { getToday, DAY_NAMES, getTashkentDate } = require('../utils/dates');
-const DayLog = require('../models/DayLog');
-const UserProfile = require('../models/UserProfile');
+let DayLog, UserProfile;
+async function getModels() {
+    if (!DayLog) DayLog = (await import('../models/DayLog.js')).default;
+    if (!UserProfile) UserProfile = (await import('../models/UserProfile.js')).default;
+}
 
 function scheduleWeeklyReport(bot, callGemini) {
   cron.schedule('0 21 * * 0', async () => {
     const masterEmail = 'javo.nur.2004@gmail.com';
-
+    await getModels();
     try {
       // Определяем диапазон дат: предыдущие 7 дней (пн–вс)
       const now = getTashkentDate();
