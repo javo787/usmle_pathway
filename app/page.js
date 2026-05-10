@@ -441,7 +441,7 @@ export default function Home() {
         {view === 'calendar' && (
           <CalendarView selectedDate={data.date} onSelectDate={(d) => { loadDataForDate(d); setView('journal'); }} theme={currentTheme}/>
         )}
-        {view === 'stats'    && <StatsDashboard data={data} goals={goals} challenges={challenges} theme={currentTheme}/>}
+        {view === 'stats'    && <StatsDashboard data={data} score={score} goals={goals} challenges={challenges} theme={currentTheme}/>}
         {view === 'settings' && <Settings settings={settings} updateSettings={updateSettings} goals={goals} updateGoals={updateGoals} theme={currentTheme}/>}
         {view === 'money' && <MoneyManager theme={currentTheme} onClose={() => setView('journal')}/>}
       </main>
