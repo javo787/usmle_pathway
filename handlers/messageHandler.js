@@ -2,102 +2,143 @@
 const { CONFIG } = require('../config');
 const { safeSend, getMasterEmail, isAllowed, escapeMarkdown } = require('../utils/telegram');
 const { getOrCreateLog } = require('../utils/dbHelpers');
-const splitMessage = require('../utils/splitMessage');
 
+const MENU_PREFIXES = ['📊', '📝', '🤲', '💀', '💰', '🧠', '🏆', '❓'];
+
+const HOURLY_PROMPT = (time, text) =>
+  `Медицина студенти (нейрохирургия мақсади). Соат ${time} да ёзди: "${text}". ` +
+  `1-2 жумла: мотивация ёки огоҳлантириш. Ўзбек кирилл.`;
+
+const CHAT_PROMPT = (text) =>
+  `Сен Жавоҳирнинг AI-коучисан. У 4-курс тиббиёт студенти, нейрохирург бўлишни мақсад қилган (Германия).\n` +
+  `У ёзди: "${text}"\n` +
+  `Ўзбек кирилл, 3-4 жумла, аниқ ва лўнда.`;
+
+// ─────────────────────────────────────────────
+// Soatlik javob saqlash
+// ─────────────────────────────────────────────
+async function handleHourlyResponse(bot, tgId, msg, log, callGemini) {
+  const hour = log.currentQuestionHour;
+  const time = String(hour).padStart(2, '0') + ':00';
+
+  const alreadyAnswered = log.hourlyResponses.some(r => r.hour === hour);
+  if (alreadyAnswered) {
+    await safeSend(bot, tgId, '✅ Бу соат учун жавоб аллақачон сақланган.');
+    return;
+  }
+
+  let aiReaction = '';
+  try {
+    aiReaction = await callGemini(HOURLY_PROMPT(time, msg.text.trim()));
+  } catch (err) {
+    console.warn('[hourly] AI reaction failed:', err.message);
+  }
+
+  log.hourlyResponses.push({
+    time,
+    hour,
+    text:      msg.text.trim(),
+    aiReaction,
+    savedAt:   new Date(),
+  });
+  log.questionPending    = false;
+  log.currentQuestionHour = null;
+  await log.save();
+
+  const reply = aiReaction
+    ? `✅ *Жавоб сақланди*\n\n🤖 ${escapeMarkdown(aiReaction)}`
+    : `✅ Жавобингиз сақланди _(${time})_`;
+
+  await safeSend(bot, tgId, reply);
+}
+
+// ─────────────────────────────────────────────
+// Erkin AI chat
+// ─────────────────────────────────────────────
+async function handleFreeChat(bot, tgId, msg, callGemini) {
+  const loadingMsg = await bot.sendMessage(tgId, '🧠 Ўйламоқда...');
+
+  let reply;
+  try {
+    reply = await callGemini(CHAT_PROMPT(msg.text));
+  } catch (err) {
+    console.error('[freeChat] Gemini error:', err.message);
+    await editOrSend(bot, tgId, loadingMsg, '⚠️ AI жавоб беришда хато. Қайта уриниб кўринг.');
+    return;
+  }
+
+  const fullText = `🤖 ${escapeMarkdown(reply)}`;
+  await editOrSend(bot, tgId, loadingMsg, fullText);
+}
+
+// ─────────────────────────────────────────────
+// Edit yuklanayotgan xabarni yoki yangi yuborish
+// ─────────────────────────────────────────────
+async function editOrSend(bot, tgId, loadingMsg, text) {
+  // safeSend ichida chunk'lash bor, lekin edit faqat birinchi qism uchun
+  const MAX = 4096;
+  const firstChunk  = text.slice(0, MAX);
+  const restChunks  = [];
+
+  for (let i = MAX; i < text.length; i += MAX) {
+    restChunks.push(text.slice(i, i + MAX));
+  }
+
+  // Edit loading xabar
+  try {
+    await bot.editMessageText(firstChunk, {
+      chat_id:    loadingMsg.chat.id,
+      message_id: loadingMsg.message_id,
+      parse_mode: 'Markdown',
+    });
+  } catch {
+    // Edit ishlamadi — o'chirib yangi yuboramiz
+    await bot.deleteMessage(tgId, loadingMsg.message_id).catch(() => {});
+    await safeSend(bot, tgId, firstChunk);
+  }
+
+  // Qolgan qismlarni alohida yuboramiz
+  for (const chunk of restChunks) {
+    await new Promise(r => setTimeout(r, 300));
+    await safeSend(bot, tgId, chunk);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Asosiy handler
+// ─────────────────────────────────────────────
 function setupMessageHandler(bot, { callGemini }) {
   bot.on('message', async (msg) => {
     try {
-      const tgId = msg.from.id.toString();
-      if (!isAllowed(tgId, CONFIG.userMap)) return;
-      if (!msg.text || msg.text.startsWith('/')) return;
+      const tgId = String(msg.from.id);
 
-      // Меню кнопкаларини игнорлаймиз — уларни commands handlers ушлайди
-      const MENU_CMDS = ['📊', '📝', '🤲', '💀', '💰', '🧠', '🏆', '❓'];
-      if (MENU_CMDS.some(cmd => msg.text.startsWith(cmd))) return;
+      // Filtrlar
+      if (!isAllowed(tgId, CONFIG.userMap))                        return;
+      if (!msg.text)                                               return;
+      if (msg.text.startsWith('/'))                                return;
+      if (MENU_PREFIXES.some(p => msg.text.startsWith(p)))        return;
 
       const masterEmail = getMasterEmail(tgId, CONFIG.userMap);
 
-      // ── DB га мурожаат (хатолик бўлса — фақат AI chat ишлайди) ──
+      // DB dan log olish
       let log = null;
       try {
         log = await getOrCreateLog(masterEmail);
       } catch (dbErr) {
-        console.error('DB error in messageHandler:', dbErr.message);
+        console.error('[messageHandler] DB error:', dbErr.message);
       }
 
-      // 1. Соатлик жавоб (фақат log мавжуд бўлса)
-      if (log && log.questionPending && log.currentQuestionHour != null) {
-        const already = log.hourlyResponses.some(r => r.hour === log.currentQuestionHour);
-        if (already) {
-          await safeSend(bot, tgId, '✅ Бу соат учун жавоб аллақачон сақланган.');
-          return;
-        }
-
-        const time = `${String(log.currentQuestionHour).padStart(2, '0')}:00`;
-        let aiReaction = '';
-        try {
-          const prompt = `Медицина студенти (нейрохирургия мақсади). Соат ${time} да ёзди: "${msg.text.trim()}". 1-2 жумла: мотивация ёки огоҳлантириш. Ўзбек кирилл.`;
-          aiReaction = await callGemini(prompt);
-        } catch {
-          aiReaction = '';
-        }
-
-        log.hourlyResponses.push({
-          time,
-          hour: log.currentQuestionHour,
-          text: msg.text.trim(),
-          aiReaction,
-          savedAt: new Date()
-        });
-        log.questionPending = false;
-        log.currentQuestionHour = null;
-        await log.save();
-
-        await safeSend(bot, tgId, aiReaction
-          ? `✅ *Жавоб сақланди*\n\n🤖 ${escapeMarkdown(aiReaction)}`
-          : `✅ Жавобингиз сақланди _(${time})_`
-        );
+      // Soatlik savol javobi
+      if (log?.questionPending && log.currentQuestionHour != null) {
+        await handleHourlyResponse(bot, tgId, msg, log, callGemini);
         return;
       }
 
-      // 2. Эркин AI чат
-      const loading = await bot.sendMessage(tgId, '🧠 Ўйламоқда...');
-      try {
-        const reply = await callGemini(
-          `Сен Жавоҳирнинг AI-коучисан. У 4-курс тиббиёт студенти, нейрохирург бўлишни мақсад қилган (Германия).\nУ ёзди: "${msg.text}"\nЎзбек кирилл, 3-4 жумла, аниқ ва лўнда.`
-        );
+      // Erkin chat
+      await handleFreeChat(bot, tgId, msg, callGemini);
 
-        const fullText = `🤖 ${escapeMarkdown(reply)}`;
-        const parts = splitMessage(fullText);
-
-        try {
-          await bot.editMessageText(parts[0], {
-            chat_id: msg.chat.id,
-            message_id: loading.message_id
-          });
-        } catch {
-          await bot.deleteMessage(tgId, loading.message_id).catch(() => {});
-          await safeSend(bot, tgId, parts[0]);
-        }
-
-        for (let i = 1; i < parts.length; i++) {
-          await safeSend(bot, tgId, parts[i]);
-          await new Promise(r => setTimeout(r, 300));
-        }
-      } catch (err) {
-        console.error('Free chat AI error:', err.message);
-        await bot.editMessageText('⚠️ AI жавоб беришда хато.', {
-          chat_id: msg.chat.id,
-          message_id: loading.message_id
-        }).catch(async () => {
-          await bot.deleteMessage(tgId, loading.message_id).catch(() => {});
-          await safeSend(bot, tgId, '⚠️ AI жавоб беришда хато.');
-        });
-      }
-
-    } catch (fatalErr) {
-      // Ҳеч қандай ошмаган хатолик — логлаймиз, бот ишлашда давом этади
-      console.error('Fatal messageHandler error:', fatalErr.message);
+    } catch (fatal) {
+      console.error('[messageHandler] Fatal error:', fatal.message, fatal.stack);
     }
   });
 }
