@@ -20,6 +20,7 @@ import MoneyManager from '@/components/MoneyManager';
 
 import { useSession } from 'next-auth/react';
 import LoginScreen from '@/components/LoginScreen';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const TODAY = () => new Date().toISOString().split('T')[0];
  
@@ -373,6 +374,7 @@ export default function Home() {
   if (isPlanLocked) return <DailyFocusLock onUnlock={handleUnlockPlan} />;
 
   return (
+   <ErrorBoundary>
     <div className={`min-h-screen pb-28 transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
 
       <SyncIndicator />
@@ -382,6 +384,7 @@ export default function Home() {
         <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full opacity-[0.06] blur-3xl ${mode === 'critical' ? 'bg-red-500' : mode === 'legend' ? 'bg-amber-400' : 'bg-emerald-500'}`}/>
         <div className={`absolute top-1/2 -left-24 w-64 h-64 rounded-full opacity-[0.04] blur-3xl ${mode === 'critical' ? 'bg-red-700' : mode === 'legend' ? 'bg-yellow-500' : 'bg-teal-400'}`}/>
       </div>
+
 
       {/* HEADER */}
       <header className="relative z-10 px-5 pt-12 pb-5">
@@ -500,5 +503,6 @@ export default function Home() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }
