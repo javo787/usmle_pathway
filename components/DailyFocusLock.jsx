@@ -96,18 +96,23 @@ export default function DailyFocusLock({ onUnlock }) {
         const formattedTasks = tasks
           .filter(t => t.trim().length >= MIN_TASK_LENGTH)
           .map(t => `[${startTime}] ${t}`);
+        // Сначала сбрасываем loading, потом вызываем onUnlock
+        setAiLoading(false);
+        abortControllerRef.current = null;
         onUnlock(formattedTasks);
         return;
       }
 
-      // Акс ҳолда танқидни кўрсатиш
       setAiResult(result);
     } catch (err) {
-      if (err.name === 'AbortError') return; // бекор қилинди
+      if (err.name === 'AbortError') return;
       setAiError('AI текширувда хатолик: ' + (err.message || 'Номаълум хато'));
     } finally {
-      setAiLoading(false);
-      abortControllerRef.current = null;
+      // Только если не approved (там уже вручную сбросили)
+      if (abortControllerRef.current !== null) {
+        setAiLoading(false);
+        abortControllerRef.current = null;
+      }
     }
   };
 
