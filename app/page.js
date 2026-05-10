@@ -329,10 +329,22 @@ export default function Home() {
   };
 
   const confirmQazo = (didPray) => {
-    if (didPray) setData(prev => ({ ...prev, spiritual: { ...prev.spiritual, qazoDone: true } }));
     setShowQazoModal(false);
-    saveData();
-  };
+    if (didPray) {
+        setData(prev => {
+            const updated = { ...prev, spiritual: { ...prev.spiritual, qazoDone: true } };
+            // сохраняем уже обновлённые данные
+            fetch('/api/journal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...updated, score, challenges, settings, goals }),
+            }).catch(console.error);
+            return updated;
+        });
+    } else {
+        saveData();
+    }
+};
 
   // ── SYNC ИНДИКАТОР ────────────────────────────
   const SyncIndicator = () => syncStatus === 'idle' ? null : (
