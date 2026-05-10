@@ -188,26 +188,35 @@ export default function Home() {
 
   // ── БИРИНЧИ ЮКЛАШ ────────────────────────────
   useEffect(() => {
-    if (status !== 'authenticated') return;
-    (async () => {
-      setIsLoading(true);
-      try {
-        await Promise.race([
-          (async () => {
-            await loadProfile();
-            await loadDataForDate(TODAY());
-          })(),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout')), 15000)
-          ),
-        ]);
-      } catch (err) {
-        console.error('Load error:', err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, [status, loadProfile, loadDataForDate]);
+  if (status === 'loading') return;
+
+  if (status === 'unauthenticated') {
+    setIsLoading(false);
+    return;
+  }
+
+  // status === 'authenticated'
+  const load = async () => {
+    setIsLoading(true); // на случай переподключения
+    try {
+      await Promise.race([
+        (async () => {
+          await loadProfile();
+          await loadDataForDate(TODAY());
+        })(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 15000)
+        ),
+      ]);
+    } catch (err) {
+      console.error('Load error:', err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  load();
+}, [status, loadProfile, loadDataForDate]);
 
   // ── SCORE ─────────────────────────────────────
   useEffect(() => {
