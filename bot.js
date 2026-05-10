@@ -36,24 +36,29 @@ if (!CONFIG.botToken || !CONFIG.mongoUri || !ALLOWED_TG_IDS.length) {
   const bot = new TelegramBot(CONFIG.botToken, { polling: true });
   console.log(`🤖 Medical Brother v6.0 — полный функционал`);
 
-  // 4. Юзербот (если настроен)
-  const userbot = await initUserbot(CONFIG.apiId, CONFIG.apiHash, CONFIG.userbotSession);
+  // 4. Юзербот (если настроен) — НЕ роняет бота если сломан
+  let userbot = null;
+  try {
+    userbot = await initUserbot(CONFIG.apiId, CONFIG.apiHash, CONFIG.userbotSession);
+  } catch (e) {
+    console.warn("⚠️ Юзербот старта бермади (ядерный протокол ўчирилди):", e.message);
+  }
 
   // 5. Все Cron-задачи
-  scheduleHourlyQuestions(bot);        // почасовые контекстные вопросы
-  scheduleMorningGreeting(bot);       // динамическое приветствие (wakeUpTime)
-  schedulePlanDeadline(bot);          // контроль планов 9:00/9:30
-  scheduleNightAnalysis(bot, callGemini); // AI-анализ + streak-награды
-  scheduleNukeProtocol(bot, userbot); // ядерный таймер
-  schedulePrayerTimes(bot);           // намоз таймер с кнопками
-  scheduleWeeklyReport(bot, callGemini); // отчёт каждое воскресенье
-  scheduleAntiRelapse(bot);           // антирелапс в 22:00 и 00:00
-  scheduleWakeUpPoll(bot);            // опрос времени пробуждения по воскресеньям
+  scheduleHourlyQuestions(bot);
+  scheduleMorningGreeting(bot);
+  schedulePlanDeadline(bot);
+  scheduleNightAnalysis(bot, callGemini);
+  scheduleNukeProtocol(bot, userbot);
+  schedulePrayerTimes(bot);
+  scheduleWeeklyReport(bot, callGemini);
+  scheduleAntiRelapse(bot);
+  scheduleWakeUpPoll(bot);
 
   // 6. Обработчики сообщений
   setupMessageHandler(bot, { callGemini });
   setupVoiceHandler(bot, { model });
-  setupCallbackHandler(bot);          // обработка всех inline-кнопок
+  setupCallbackHandler(bot);
   registerCommands(bot, { callGemini });
 
   // 7. HTTP для мониторинга
@@ -69,9 +74,14 @@ if (!CONFIG.botToken || !CONFIG.mongoUri || !ALLOWED_TG_IDS.length) {
     console.log(`🌐 HTTP health-check на порту ${process.env.PORT || 3000}`);
   });
 
-  // Ошибки polling
+  // Ошибки polling — не роняем процесс
   bot.on('polling_error', (err) => {
-    if (err.code !== 'EFATAL') console.error('Polling error:', err.code);
+    if (err.code !== 'EFATAL') console.error('Polling error:', err.code, err.message);
+  });
+
+  // Непойманные ошибки — логируем, не падаем
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled rejection:', reason);
   });
 
   console.log('🚀 Бот полностью готов к работе');
