@@ -2,10 +2,14 @@ const { safeSend, getMasterEmail } = require('../utils/telegram');
 const { getOrCreateLog } = require('../utils/dbHelpers');
 const { getTimeLeft } = require('../utils/dates');
 const { CONFIG } = require('../config');
-const UserProfile = require('../models/UserProfile');
+let UserProfile;
+async function getModels() {
+    if (!UserProfile) UserProfile = (await import('../models/UserProfile.js')).default;
+}
 
 function setupCallbackHandler(bot) {
   bot.on('callback_query', async (query) => {
+    await getModels();
     const tgId = query.from.id.toString();
     const masterEmail = getMasterEmail(tgId, CONFIG.userMap);
     if (!masterEmail) return;
