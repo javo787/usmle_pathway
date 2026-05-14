@@ -25,7 +25,7 @@ function scheduleNukeProtocol(bot, userbot) {
 
         if (hoursPassed >= 24) {
           if (userbot && CONFIG.nukeContacts.length > 0) {
-            const nukeMsg = `Ассалому алайкум. Мен бугун ... ${log.penaltyDebt} сомони ...`;
+            const nukeMsg = `Ассалому алайкум. Ман бугун ... ${log.penaltyDebt} сомони ...`;
             for (const contact of CONFIG.nukeContacts) {
               try { await userbot.sendMessage(contact, { message: nukeMsg }); } catch (e) { console.error("Nuke:", e.message); }
             }
