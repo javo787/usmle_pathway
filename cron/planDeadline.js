@@ -24,7 +24,7 @@ function schedulePlanDeadline(bot) {
             `Сайтда режа топилмади.\n` +
             `Сизда *9:30 гача* вақт бор.\n\n` +
             `Акс ҳолда — *+15 сомони жарима* автоматик қўшилади.\n\n` +
-            `👉 Дарҳол режа тузинг: https://muslim-doctor-v2.vercel.app`
+            `👉 Дарҳол режа тузинг: https://usmle-pathway.vercel.app/`
           );
         }
       }
@@ -62,7 +62,7 @@ function schedulePlanDeadline(bot) {
             `💰 *+${PENALTY} сомони* қарзга қўшилди.\n` +
             `💰 Жами қарз: *${log.penaltyDebt} сомони*\n\n` +
             `_Вақт Аллоҳнинг амонати. Уни беҳуда ўтказма._\n\n` +
-            `Ҳозир сайтга кириб режа туз: https://muslim-doctor-v2.vercel.app`
+            `Ҳозир сайтга кириб режа туз: https://usmle-pathway.vercel.app/`
           );
         }
       }
