@@ -2,6 +2,40 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Brain, Moon, TrendingUp, Shield, Languages, FileText } from 'lucide-react';
 
+const BarChart = ({ logs, dataKey, subKey, color }) => {
+  // Last 7 days
+  const last7 = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dStr = d.toISOString().split('T')[0];
+    const log = logs.find(l => l.date === dStr);
+    last7.push({
+      label: dStr.slice(8, 10),
+      value: log ? (log[dataKey]?.[subKey] || 0) : 0
+    });
+  }
+
+  const maxVal = Math.max(...last7.map(d => d.value), 5);
+
+  return (
+    <div className="flex items-end gap-1.5 h-20 w-full mt-2">
+      {last7.map((d, i) => (
+        <div key={i} className="flex flex-col items-center gap-1 flex-1">
+          <div className="w-full flex items-end h-14">
+            <div
+              className={`w-full rounded-t-lg transition-all duration-1000 ${color}`}
+              style={{ height: `${(d.value / maxVal) * 100}%`, opacity: d.value > 0 ? 1 : 0.2 }}
+            />
+          </div>
+          <div className="text-[8px] font-bold opacity-30">{d.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const ProgressBar = ({ label, value, max, color }) => {
   const safeMax = max || 1;
   const percent = Math.min(100, Math.round((value / safeMax) * 100));
@@ -23,6 +57,47 @@ const ProgressBar = ({ label, value, max, color }) => {
 
 export default function StatsDashboard({ data, score, goals, challenges, theme }) {
   const [maxStreak, setMaxStreak] = useState(0);
+  const [teachStreak, setTeachStreak] = useState(0);
+  const [recentLogs, setRecentLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecent = async () => {
+      try {
+        const res = await fetch('/api/journal');
+        const json = await res.json();
+        const logs = json.logs || [];
+        setRecentLogs(logs);
+
+        // Calculate Teach-Back streak
+        let streak = 0;
+        const sortedLogs = [...logs].sort((a,b) => b.date.localeCompare(a.date));
+
+        // Find if today/yesterday has teachBack to start streak
+        const todayStr = new Date().toISOString().split('T')[0];
+        let checkDate = new Date();
+
+        for (let i = 0; i < 30; i++) {
+          const dStr = checkDate.toISOString().split('T')[0];
+          const log = logs.find(l => l.date === dStr);
+          if (log && log.academic?.teachBack?.trim().length > 0) {
+            streak++;
+          } else if (dStr !== todayStr) {
+            // Break streak only if it's not today (today might not be filled yet)
+            break;
+          }
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+        setTeachStreak(streak);
+
+      } catch (err) {
+        console.error('StatsDashboard fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRecent();
+  }, []);
 
   useEffect(() => {
     if (challenges && challenges.length > 0) {
@@ -133,18 +208,40 @@ export default function StatsDashboard({ data, score, goals, challenges, theme }
         </div>
       </div>
 
-      {/* Clean Streak */}
-      <div className={`p-6 rounded-3xl ${theme.card}`}>
-        <h3 className={`font-bold flex items-center mb-4 text-lg ${theme.cardTitle}`}>
-          <Shield size={20} className="mr-2" /> Тозалик Стрики
-        </h3>
-        <div className="text-center">
-          <div className={`text-6xl font-black font-display mb-2 ${theme.text}`}>{maxStreak}</div>
-          <div className="text-[10px] uppercase font-bold opacity-40 tracking-widest">кун</div>
+      {/* Streaks */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Clean Streak */}
+        <div className={`p-6 rounded-3xl ${theme.card}`}>
+          <h3 className={`font-bold flex items-center mb-4 text-[10px] uppercase tracking-widest ${theme.cardTitle}`}>
+            <Shield size={14} className="mr-2" /> Тозалик
+          </h3>
+          <div className="text-center">
+            <div className={`text-4xl font-black font-display mb-1 ${theme.text}`}>{maxStreak}</div>
+            <div className="text-[8px] uppercase font-bold opacity-40 tracking-widest">кун</div>
+          </div>
         </div>
-        {challenges.length === 0 && (
-          <p className="text-center text-xs opacity-40 mt-3">Quitzilla-да трекер қўшинг</p>
-        )}
+
+        {/* Teach-Back Streak */}
+        <div className={`p-6 rounded-3xl ${theme.card}`}>
+          <h3 className={`font-bold flex items-center mb-4 text-[10px] uppercase tracking-widest ${theme.cardTitle}`}>
+            <Brain size={14} className="mr-2 text-indigo-500" /> Teach-Back
+          </h3>
+          <div className="text-center">
+            <div className={`text-4xl font-black font-display mb-1 ${theme.text}`}>{teachStreak}</div>
+            <div className="text-[8px] uppercase font-bold opacity-40 tracking-widest">стрик</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sleep Quality Chart */}
+      <div className={`p-6 rounded-3xl ${theme.card}`}>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className={`font-bold flex items-center text-lg ${theme.cardTitle}`}>
+            <Moon size={20} className="mr-2 text-amber-500" /> Уйқу сифати (7 кун)
+          </h3>
+          <div className="text-xs font-black text-amber-500">{data.spiritual.sleepQuality || 0}/5</div>
+        </div>
+        <BarChart logs={recentLogs} dataKey="spiritual" subKey="sleepQuality" color="bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
       </div>
 
       {/* Germany Path прогресс */}

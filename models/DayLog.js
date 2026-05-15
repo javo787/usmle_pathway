@@ -9,6 +9,7 @@ const DayLogSchema = new mongoose.Schema({
     prohibitions: { type: String, default: '' },
     tomorrowPlans: [{ type: String }],
     reflection:   { type: String, default: '' },
+    coreIdea:     { type: String, default: '' },
   },
 
   academic: {
@@ -17,6 +18,8 @@ const DayLogSchema = new mongoose.Schema({
     ankiDone:           { type: Number,  default: 0     },
     repetition:         { type: Boolean, default: false },
     additionalResource: { type: Boolean, default: false },
+    focusSessions:      { type: Number,  default: 0     },
+    teachBack:          { type: String,  default: ''    },
   },
 
   spiritual: {
@@ -33,6 +36,7 @@ const DayLogSchema = new mongoose.Schema({
     zulm:         { type: String,  default: ''    },
     sadaqa:       { type: Boolean, default: false },
     silaiRahm:    { type: Boolean, default: false },
+    sleepQuality: { type: Number,  default: 0     },
   },
 
   english: {

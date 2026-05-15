@@ -323,6 +323,27 @@ export default function SpiritualShield({ data, updateData, theme }) {
           </button>
         ))}
 
+        {/* Sleep Quality */}
+        <div className={`p-2 rounded-2xl border flex flex-col items-center justify-center gap-1 ${theme.input}`}>
+          <span className="text-[7px] font-black uppercase opacity-40">Уйқу сифати</span>
+          <div className="flex gap-0.5">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => updateData('spiritual', { ...data, sleepQuality: star })}
+                className="transition-transform active:scale-125"
+              >
+                <Star
+                  size={10}
+                  fill={(data.sleepQuality || 0) >= star ? "#F59E0B" : "none"}
+                  className={(data.sleepQuality || 0) >= star ? "text-amber-500" : "opacity-20"}
+                />
+              </button>
+            ))}
+          </div>
+          <span className="text-[9px] font-black text-amber-500">{data.sleepQuality || 0}</span>
+        </div>
+
         {/* ЗИКР */}
         <button
           onClick={() => setShowZikr(true)}

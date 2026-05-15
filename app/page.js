@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Home as IconHome, BarChart2, Settings as IconSettings, Save, Wallet, Headphones, X, Check, Flame, Calendar as IconCalendar, Moon, Cloud, CloudOff, Loader } from 'lucide-react';
 import { themes } from '@/lib/themeUtils';
 import { calculateScore, determineMode } from '@/lib/gameLogic';
+import { Zap } from 'lucide-react';
 
 import Quitzilla from '@/components/Quitzilla';
 import DayPlan from '@/components/DayPlan';
@@ -31,6 +32,7 @@ const EMPTY_DATA = (dateStr) => ({
     prohibitions: '',
     tomorrowPlans: ['', '', '', '', ''],
     reflection: '',
+    coreIdea: '',
   },
   academic: {
     // Немецкий язык
@@ -45,6 +47,8 @@ const EMPTY_DATA = (dateStr) => ({
     ankiRepetition: false,
     // Публикация / статья
     pubHours: 0,
+    focusSessions: 0,
+    teachBack: '',
   },
   spiritual: {
     prayersDone: 0,
@@ -55,6 +59,7 @@ const EMPTY_DATA = (dateStr) => ({
     quranPages: 0,
     quranNote: '',
     sleepOnTime: false,
+    sleepQuality: 0,
     nafsRelapse: false,
     qazoDone: false,
     zulm: '',
@@ -423,17 +428,26 @@ export default function Home() {
             </p>
           </div>
 
-          {data.penaltyDebt > 0 ? (
-            <button onClick={() => setShowPayModal(true)} className="bg-red-500/15 border border-red-500/50 rounded-2xl p-3 px-4 animate-breathe">
-              <div className="text-[9px] text-red-400 font-bold uppercase tracking-widest flex items-center justify-end gap-1 mb-0.5">Қарз <Wallet size={9}/></div>
-              <div className="text-2xl font-black text-red-400 font-display">{data.penaltyDebt}с</div>
-            </button>
-          ) : (
-            <div className={`border rounded-2xl p-3 px-4 flex flex-col items-center gap-1 ${mode === 'legend' ? 'bg-amber-500/10 border-amber-400/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600'}`}>
-              {mode === 'legend' ? <Flame size={18} className="animate-float"/> : <Check size={16}/>}
-              <div className="text-[9px] font-black uppercase tracking-widest">{mode === 'legend' ? 'ЛЕГЕНД' : 'ТОЗА'}</div>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {data.planning.coreIdea && (
+              <div className="bg-amber-500/20 border border-amber-500/50 rounded-2xl p-3 px-4 flex flex-col items-center justify-center animate-in zoom-in duration-500">
+                <Zap size={18} className="text-amber-500 animate-pulse fill-amber-500" />
+                <div className="text-[7px] font-black text-amber-600 uppercase tracking-tighter mt-1">COMPRESSED</div>
+              </div>
+            )}
+
+            {data.penaltyDebt > 0 ? (
+              <button onClick={() => setShowPayModal(true)} className="bg-red-500/15 border border-red-500/50 rounded-2xl p-3 px-4 animate-breathe">
+                <div className="text-[9px] text-red-400 font-bold uppercase tracking-widest flex items-center justify-end gap-1 mb-0.5">Қарз <Wallet size={9}/></div>
+                <div className="text-2xl font-black text-red-400 font-display">{data.penaltyDebt}с</div>
+              </button>
+            ) : (
+              <div className={`border rounded-2xl p-3 px-4 flex flex-col items-center gap-1 ${mode === 'legend' ? 'bg-amber-500/10 border-amber-400/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600'}`}>
+                {mode === 'legend' ? <Flame size={18} className="animate-float"/> : <Check size={16}/>}
+                <div className="text-[9px] font-black uppercase tracking-widest">{mode === 'legend' ? 'ЛЕГЕНД' : 'ТОЗА'}</div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1.5">
