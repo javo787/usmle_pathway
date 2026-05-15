@@ -112,6 +112,22 @@ export default function DayPlan({ data, updateData, theme }) {
            placeholder="08:00 - First Aid..."
          />
        </div>
+
+       {/* Daily Compression */}
+       <div className="mb-6">
+         <label className={`text-[10px] font-black uppercase tracking-widest opacity-40 block mb-2 ml-1`}>
+           Бугунги 1 ta главная идея
+         </label>
+         <div className="relative">
+            <input
+              value={data.coreIdea || ""}
+              onChange={(e) => updateData('planning', { ...data, coreIdea: e.target.value })}
+              className={`w-full rounded-xl p-3 pl-10 text-sm outline-none border transition-all duration-300 ${data.coreIdea ? 'border-amber-500/50 bg-amber-500/5' : theme.input}`}
+              placeholder="Бир жумла билан..."
+            />
+            <Zap size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${data.coreIdea ? 'text-amber-500' : 'opacity-20'}`} />
+         </div>
+       </div>
        
        <div className="mb-6">
          <div className="flex items-center space-x-2">
