@@ -1,0 +1,52 @@
+⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
+▲ Next.js 16.1.3 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.0.2:3001
+
+✓ Starting...
+✓ Ready in 1070ms
+○ Compiling / ...
+ GET / 200 in 7.4s (compile: 6.8s, render: 636ms)
+⨯ Error: MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.
+    at module evaluation (lib/mongodbAuth.js:13:11)
+    at module evaluation (app/api/auth/[...nextauth]/route.js:5:1)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/[...nextauth]/route.js:9:3)
+  11 | if (typeof window === "undefined") {
+  12 |   if (!uri) {
+> 13 |     throw new Error("MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.");
+     |           ^
+  14 |   }
+  15 |
+  16 |   if (process.env.NODE_ENV === "development") { {
+  page: '/api/auth/session'
+}
+ GET /api/auth/session 500 in 4.9s
+ GET / 200 in 80ms (compile: 6ms, render: 74ms)
+⨯ Error: MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.
+    at module evaluation (lib/mongodbAuth.js:13:11)
+    at module evaluation (app/api/auth/[...nextauth]/route.js:5:1)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/[...nextauth]/route.js:9:3)
+  11 | if (typeof window === "undefined") {
+  12 |   if (!uri) {
+> 13 |     throw new Error("MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.");
+     |           ^
+  14 |   }
+  15 |
+  16 |   if (process.env.NODE_ENV === "development") { {
+  page: '/api/auth/session'
+}
+ GET /api/auth/session 500 in 102ms (compile: 88ms, render: 14ms)
+⨯ Error: MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.
+    at module evaluation (lib/mongodbAuth.js:13:11)
+    at module evaluation (app/api/auth/[...nextauth]/route.js:5:1)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/[...nextauth]/route.js:9:3)
+  11 | if (typeof window === "undefined") {
+  12 |   if (!uri) {
+> 13 |     throw new Error("MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.");
+     |           ^
+  14 |   }
+  15 |
+  16 |   if (process.env.NODE_ENV === "development") { {
+  page: '/api/auth/_log'
+}
+ POST /api/auth/_log 500 in 128ms (compile: 93ms, render: 35ms)

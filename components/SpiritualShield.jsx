@@ -24,8 +24,32 @@ const DEFAULT_ZIKRS = [
 // ============================================
 // ЗИКР МОДАЛИ
 // ============================================
-function ZikrModal({ zikrs, onClose, onUpdate, theme }) {
+function ZikrModal({ zikrs: initialZikrs, onClose, onUpdate, theme }) {
   const [newLabel, setNewLabel] = useState('');
+  const [zikrs, setZikrs] = useState(initialZikrs);
+
+  useEffect(() => {
+    // Load custom zikrs from localStorage
+    const savedCustom = JSON.parse(localStorage.getItem('custom_zikrs') || '[]');
+    // Filter out defaults that might be in savedCustom to avoid duplicates,
+    // but actually we want to merge them.
+    // The requirement is: merge defaults + saved custom ones.
+    const merged = [...DEFAULT_ZIKRS];
+    savedCustom.forEach(cz => {
+      if (!merged.find(mz => mz.id === cz.id)) {
+        merged.push(cz);
+      }
+    });
+
+    // Also need to merge counts from initialZikrs (which come from DB/parent state)
+    const finalZikrs = merged.map(mz => {
+      const stateZikr = initialZikrs.find(iz => iz.id === mz.id || iz.label === mz.label);
+      return stateZikr ? { ...mz, count: stateZikr.count, target: stateZikr.target || mz.target } : mz;
+    });
+
+    setZikrs(finalZikrs);
+  }, []);
+
   const total = zikrs.reduce((s, z) => s + z.count, 0);
 
   useEffect(() => {
@@ -33,17 +57,31 @@ function ZikrModal({ zikrs, onClose, onUpdate, theme }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const updateCount = (id, delta) => {
-    onUpdate(zikrs.map(z => z.id === id ? { ...z, count: Math.max(0, z.count + delta) } : z));
+  const handleUpdate = (newList) => {
+    setZikrs(newList);
+    onUpdate(newList);
+
+    // Save only custom zikrs to localStorage
+    const customOnly = newList.filter(z => !DEFAULT_ZIKRS.find(dz => dz.id === z.id));
+    localStorage.setItem('custom_zikrs', JSON.stringify(customOnly));
+  };
+
+  const updateCount = (id, value) => {
+    handleUpdate(zikrs.map(z => z.id === id ? { ...z, count: Math.max(0, value) } : z));
+  };
+
+  const updateTarget = (id, target) => {
+    handleUpdate(zikrs.map(z => z.id === id ? { ...z, target: Math.max(1, target) } : z));
   };
 
   const addCustom = () => {
     if (!newLabel.trim()) return;
-    onUpdate([...zikrs, { id: Date.now().toString(), label: newLabel.trim(), count: 0, target: 100 }]);
+    const newZikr = { id: Date.now().toString(), label: newLabel.trim(), count: 0, target: 100 };
+    handleUpdate([...zikrs, newZikr]);
     setNewLabel('');
   };
 
-  const removeZikr = (id) => onUpdate(zikrs.filter(z => z.id !== id));
+  const removeZikr = (id) => handleUpdate(zikrs.filter(z => z.id !== id));
 
   const bgColor = theme.card.includes('1A0F') ? 'bg-[#1A1210]' : theme.card.includes('white/90') ? 'bg-[#FBF6EC]' : 'bg-white';
   const borderColor = theme.card.includes('red') ? 'border-red-800/30' : theme.card.includes('E8C9') ? 'border-amber-200/50' : 'border-emerald-100';
@@ -83,38 +121,51 @@ function ZikrModal({ zikrs, onClose, onUpdate, theme }) {
         </div>
 
         {/* Зикрлар рўйхати — overflow scroll, max баландлик */}
-        <div style={{ maxHeight: '52vh', overflowY: 'auto' }} className="space-y-2 mb-4 pr-1">
+        <div style={{ maxHeight: '52vh', overflowY: 'auto' }} className="space-y-4 mb-4 pr-1 custom-scrollbar">
           {zikrs.map(z => {
-            const pct = Math.min(100, (z.count / z.target) * 100);
+            const pct = Math.min(100, (z.count / (z.target || 1)) * 100);
             const done = z.count >= z.target;
             return (
-              <div key={z.id} className={`rounded-2xl p-3 border ${theme.input}`}>
-                {/* Сатр 1: ном + тугмалар */}
-                <div className="flex items-center gap-2 mb-2">
-                  {/* Ном — flex-1, min-w-0 билан truncate */}
-                  <div className="flex items-center gap-1 flex-1 min-w-0">
-                    {done && <Check size={12} className={`${theme.icon} flex-shrink-0`}/>}
-                    <span className={`text-sm font-bold truncate ${theme.text}`}>{z.label}</span>
+              <div key={z.id} className={`rounded-2xl p-4 border transition-all ${done ? 'bg-emerald-500/5 border-emerald-500/20' : theme.input}`}>
+                {/* Сатр 1: ном + target */}
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {done && <Check size={14} className="text-emerald-500 flex-shrink-0"/>}
+                    <span className={`text-sm font-black truncate ${theme.text}`}>{z.label}</span>
+                    <div className="flex items-center bg-current/5 rounded-lg px-2 py-0.5">
+                      <span className="text-[10px] opacity-40 mr-1">мақсад:</span>
+                      <input
+                        type="number"
+                        value={z.target}
+                        onChange={(e) => updateTarget(z.id, parseInt(e.target.value) || 0)}
+                        className="bg-transparent border-none outline-none text-[10px] font-bold w-10 p-0"
+                      />
+                    </div>
                   </div>
-                  {/* Тугмалар — flex-shrink-0 билан сиқилмайди */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onPointerDown={() => updateCount(z.id, -1)}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${theme.input}`}
-                    ><Minus size={13}/></button>
-                    <span className={`text-sm font-black w-8 text-center ${theme.text}`}>{z.count}</span>
-                    <button
-                      onPointerDown={() => updateCount(z.id, 1)}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold transition ${theme.button}`}
-                    ><Plus size={13}/></button>
-                    {/* X — ҳар доим кўриниб туради */}
-                    <button
-                      onPointerDown={() => removeZikr(z.id)}
-                      style={{ minWidth: 28, minHeight: 28 }}
-                      className="rounded-lg flex items-center justify-center opacity-40 hover:opacity-80 transition"
-                    ><X size={13}/></button>
-                  </div>
+                  <button
+                    onPointerDown={() => removeZikr(z.id)}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center opacity-20 hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 transition-all"
+                  ><X size={14}/></button>
                 </div>
+
+                {/* Сатр 2: Slider + Number Input */}
+                <div className="flex items-center gap-4 mb-3">
+                   <input
+                      type="range"
+                      min="0"
+                      max={Math.max(z.target * 1.5, z.count, 100)}
+                      value={z.count}
+                      onChange={(e) => updateCount(z.id, parseInt(e.target.value))}
+                      className="flex-1 h-1.5 bg-current/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                   />
+                   <input
+                      type="number"
+                      value={z.count}
+                      onChange={(e) => updateCount(z.id, parseInt(e.target.value) || 0)}
+                      className={`w-14 text-center font-black text-sm p-1.5 rounded-xl border ${theme.input}`}
+                   />
+                </div>
+
                 {/* Прогресс бар */}
                 <div className={`w-full h-1.5 rounded-full overflow-hidden ${theme.card.includes('1A0F') ? 'bg-white/10' : 'bg-black/5'}`}>
                   <div
@@ -149,6 +200,81 @@ function ZikrModal({ zikrs, onClose, onUpdate, theme }) {
             className={`rounded-2xl flex items-center justify-center font-bold transition ${newLabel.trim() ? theme.button : theme.input + ' opacity-40 border'}`}
           ><Plus size={18}/></button>
         </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ============================================
+// НАФЛ НАМОЗЛАРИ МОДАЛИ
+// ============================================
+function NaflModal({ selected = [], onClose, onUpdate, theme }) {
+  const NAFL_TYPES = [
+    'Таҳажжуд', 'Дуҳо', 'Авваабийн', 'Тасбеҳ', 'Истихора', 'Равотиб (суннат)'
+  ];
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const toggleNafl = (type) => {
+    if (selected.includes(type)) {
+      onUpdate(selected.filter(t => t !== type));
+    } else {
+      onUpdate([...selected, type]);
+    }
+  };
+
+  const bgColor = theme.card.includes('1A0F') ? 'bg-[#1A1210]' : theme.card.includes('white/90') ? 'bg-[#FBF6EC]' : 'bg-white';
+  const borderColor = theme.card.includes('red') ? 'border-red-800/30' : theme.card.includes('E8C9') ? 'border-amber-200/50' : 'border-emerald-100';
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 9999 }}>
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        style={{ zIndex: 0 }}
+        onPointerDown={(e) => { e.stopPropagation(); onClose(); }}
+      />
+      <div
+        className={`relative w-full max-w-md rounded-t-3xl px-5 pt-5 pb-10 ${bgColor} border-t ${borderColor}`}
+        style={{ zIndex: 1 }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 rounded-full bg-current opacity-20 mx-auto mb-4"/>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className={`font-black text-lg ${theme.text}`}>Нафл намозлари</h3>
+          <button
+            onPointerDown={(e) => { e.stopPropagation(); onClose(); }}
+            style={{ minWidth: 40, minHeight: 40 }}
+            className={`rounded-2xl flex items-center justify-center border transition ${theme.input}`}
+          ><X size={20}/></button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {NAFL_TYPES.map(type => {
+            const isSelected = selected.includes(type);
+            return (
+              <button
+                key={type}
+                onPointerDown={() => toggleNafl(type)}
+                className={`p-4 rounded-2xl border text-sm font-bold transition-all duration-300 flex items-center justify-between ${
+                  isSelected ? theme.button + ' border-transparent' : theme.input + ' opacity-60'
+                }`}
+              >
+                <span>{type}</span>
+                {isSelected && <Check size={14}/>}
+              </button>
+            );
+          })}
+        </div>
+
+        <button onPointerDown={onClose} className={`w-full py-3.5 rounded-2xl font-bold text-sm transition ${theme.button}`}>
+          ✓ Сақлаш
+        </button>
       </div>
     </div>,
     document.body
@@ -234,6 +360,7 @@ function QuranModal({ data, onClose, onUpdate, theme }) {
 export default function SpiritualShield({ data, updateData, theme }) {
   const [showZikr, setShowZikr] = useState(false);
   const [showQuran, setShowQuran] = useState(false);
+  const [showNafl, setShowNafl] = useState(false);
 
   const prayers = data.prayers || {};
 
@@ -306,7 +433,6 @@ export default function SpiritualShield({ data, updateData, theme }) {
       {/* АМАЛЛАР */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { key: 'tahajjud',    label: 'Таҳажжуд',   icon: Moon  },
           { key: 'sleepOnTime', label: '23:00 Уйқу',  icon: Clock },
           { key: 'sadaqa',      label: 'Садақа',      icon: Heart },
           { key: 'silaiRahm',   label: 'Силаи раҳм',  icon: Star  },
@@ -322,6 +448,20 @@ export default function SpiritualShield({ data, updateData, theme }) {
             <span className="text-[8px] font-black text-center leading-tight">{label}</span>
           </button>
         ))}
+
+        {/* НАФЛ */}
+        <button
+          onClick={() => setShowNafl(true)}
+          className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all duration-300 ${
+            (data.naflPrayers || []).length > 0 ? theme.button + ' border-transparent' : theme.input + ' opacity-50 hover:opacity-80'
+          }`}
+        >
+          <Moon size={15}/>
+          <span className="text-[8px] font-black text-center leading-tight">Нафл</span>
+          {(data.naflPrayers || []).length > 0 && (
+            <span className="text-[8px] font-black opacity-80">{(data.naflPrayers || []).length}</span>
+          )}
+        </button>
 
         {/* Sleep Quality */}
         <div className={`p-2 rounded-2xl border flex flex-col items-center justify-center gap-1 ${theme.input}`}>
@@ -371,6 +511,14 @@ export default function SpiritualShield({ data, updateData, theme }) {
 
       {showZikr  && <ZikrModal  zikrs={zikrs} onClose={() => setShowZikr(false)}  onUpdate={updateZikrs} theme={theme}/>}
       {showQuran && <QuranModal data={data}   onClose={() => setShowQuran(false)} onUpdate={updateQuran} theme={theme}/>}
+      {showNafl  && (
+        <NaflModal
+          selected={data.naflPrayers || []}
+          onClose={() => setShowNafl(false)}
+          onUpdate={(val) => updateData('spiritual', { ...data, naflPrayers: val })}
+          theme={theme}
+        />
+      )}
 
       {/* Daily Muhasaba (Stoic & Islamic Self-Examination) */}
       <div className="mt-6 pt-5 border-t border-current/10">
