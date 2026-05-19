@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Activity, Brain, Moon, TrendingUp, Shield, Languages, FileText } from 'lucide-react';
+import { Activity, Brain, Moon, TrendingUp, Shield, Languages, FileText, Link as LinkIcon, Anchor } from 'lucide-react';
 
 const BarChart = ({ logs, dataKey, subKey, color }) => {
   // Last 7 days
@@ -60,6 +60,8 @@ export default function StatsDashboard({ data, score, goals, challenges, theme }
   const [teachStreak, setTeachStreak] = useState(0);
   const [recentLogs, setRecentLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [habitReview, setHabitReview] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
     const fetchRecent = async () => {
@@ -124,6 +126,39 @@ export default function StatsDashboard({ data, score, goals, challenges, theme }
 
   // Germany Path Score — прогресс к цели
   const germanProgress = Math.min(100, Math.round(((data.academic.germanMinutes || 0) / (goals?.germanMinutes || 45)) * 100));
+
+  // Stoic Score: % of days with score >= 60 AND schedule filled
+  const stoicDays = recentLogs.filter(l => (l.score >= 60) && (l.planning?.schedule?.length > 10)).length;
+  const stoicScore = recentLogs.length > 0 ? Math.round((stoicDays / recentLogs.length) * 100) : 0;
+
+  const HABITS = [
+    { label: 'German', check: (l) => (l.academic?.germanMinutes || 0) >= (goals?.germanMinutes || 45) },
+    { label: 'Anki',   check: (l) => (l.academic?.ankiDone || 0) >= (goals?.anki || 50) },
+    { label: 'Prayer', check: (l) => (l.spiritual?.prayersDone === 5) },
+    { label: 'Sport',  check: (l) => l.sport?.didSport },
+    { label: 'Sleep',  check: (l) => l.spiritual?.sleepOnTime },
+  ];
+
+  const fetchHabitReview = async () => {
+    if (recentLogs.length < 3) {
+      alert("Таҳлил учун камида 3 кунлик маълумот керак.");
+      return;
+    }
+    setReviewLoading(true);
+    try {
+      const res = await fetch('/api/ai-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'habit_review', data: { weekLogs: recentLogs.slice(0, 7) } })
+      });
+      const result = await res.json();
+      setHabitReview(result);
+    } catch (e) {
+      console.error('Habit Review Error:', e);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4 animate-in fade-in zoom-in duration-300">
@@ -231,6 +266,79 @@ export default function StatsDashboard({ data, score, goals, challenges, theme }
             <div className="text-[8px] uppercase font-bold opacity-40 tracking-widest">стрик</div>
           </div>
         </div>
+      </div>
+
+      {/* Habit Chains (Atomic Habits) */}
+      <div className={`p-6 rounded-3xl ${theme.card}`}>
+        <h3 className={`font-bold flex items-center mb-4 text-sm ${theme.cardTitle}`}>
+          <LinkIcon size={16} className="mr-2" /> Habit Chains (Одат занжирлари)
+        </h3>
+        <div className="space-y-4">
+          {HABITS.map(habit => {
+            const row = [];
+            const now = new Date();
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date(now);
+              d.setDate(d.getDate() - i);
+              const dStr = d.toISOString().split('T')[0];
+              const log = recentLogs.find(l => l.date === dStr);
+              row.push({ done: log ? habit.check(log) : false, label: dStr.slice(8, 10) });
+            }
+            return (
+              <div key={habit.label} className="flex items-center justify-between">
+                <span className="text-[10px] font-bold opacity-60 w-12">{habit.label}</span>
+                <div className="flex gap-1.5">
+                  {row.map((day, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <div className={`w-3.5 h-3.5 rounded-full transition-all duration-500 ${day.done ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-white/5 border border-white/10'}`} />
+                      <span className="text-[6px] opacity-30">{day.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[9px] opacity-40 mt-4 italic text-center">"Never miss twice" — занжирни узманг.</p>
+
+        <button
+          onClick={fetchHabitReview}
+          disabled={reviewLoading}
+          className={`w-full mt-4 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest border transition-all ${theme.input} hover:bg-indigo-500/10 hover:border-indigo-500/30 flex items-center justify-center gap-2`}
+        >
+          {reviewLoading ? <Loader size={12} className="animate-spin"/> : <Zap size={12}/>}
+          Одатларни AI Таҳлил қилиш
+        </button>
+
+        {habitReview && (
+          <div className="mt-4 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 animate-in slide-in-from-top-2 duration-500">
+             <p className="text-[10px] font-black text-indigo-500 uppercase mb-2">AI Одат Коучи</p>
+             <p className="text-xs font-bold mb-2">"{habitReview.identity_statement}"</p>
+             <div className="space-y-2">
+                {habitReview.broken_chains?.length > 0 && (
+                  <div className="text-[9px] text-red-500 font-bold">⚠️ Узилган занжирлар: {habitReview.broken_chains.join(', ')}</div>
+                )}
+                <div className="text-[9px] opacity-70">🚀 Қадам: {habitReview.recovery_action}</div>
+                <div className="text-[9px] text-emerald-600 font-black">✨ Win: {habitReview.atomic_win}</div>
+             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stoic Score */}
+      <div className={`p-6 rounded-3xl border-2 border-slate-500/20 ${theme.card}`}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className={`font-bold flex items-center text-sm ${theme.cardTitle}`}>
+            <Anchor size={16} className="mr-2" /> Стоик балл (Назорат)
+          </h3>
+          <div className="text-xl font-black text-slate-500">{stoicScore}%</div>
+        </div>
+        <div className="h-1.5 w-full bg-slate-500/10 rounded-full overflow-hidden">
+          <div className="h-full bg-slate-500 transition-all duration-1000" style={{ width: `${stoicScore}%` }} />
+        </div>
+        <p className="text-[9px] opacity-50 mt-3 leading-relaxed">
+          Режага амал қилинган ва 60% дан юқори натижа кўрсатилган кунлар нисбати. Ташқи омиллардан қатъий назар ўз вазифасини бажариш.
+        </p>
       </div>
 
       {/* Sleep Quality Chart */}

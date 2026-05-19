@@ -1,6 +1,61 @@
 'use client';
 import React, { useState } from 'react';
-import { Calendar, Ban, ListTodo, Zap, CheckCircle2, Mic, MicOff, PenTool } from 'lucide-react';
+import { Calendar, Ban, ListTodo, Zap, CheckCircle2, Mic, MicOff, PenTool, Star, LayoutGrid } from 'lucide-react';
+
+const CoveyMatrixWidget = ({ tasks, coveyMatrix, onChange, theme }) => {
+  const quadrants = [
+    { id: 'Q1', label: 'Q1: Муҳим + Шошилинч', color: 'bg-red-500/10 text-red-500', border: 'border-red-500/20' },
+    { id: 'Q2', label: 'Q2: Муҳим + Шош. эмас', color: 'bg-emerald-500/10 text-emerald-500', border: 'border-emerald-500/20' },
+    { id: 'Q3', label: 'Q3: Шошилинч (Бекорчи)', color: 'bg-amber-500/10 text-amber-500', border: 'border-amber-500/20' },
+    { id: 'Q4', label: 'Q4: Муҳим эмас (Вақт ўғриси)', color: 'bg-slate-500/10 text-slate-500', border: 'border-slate-500/20' },
+  ];
+
+  const toggleTask = (qId, taskIdx) => {
+    const newMatrix = { ...(coveyMatrix || { Q1: [], Q2: [], Q3: [], Q4: [] }) };
+    // Remove from all quadrants first (a task belongs to one)
+    Object.keys(newMatrix).forEach(k => {
+      newMatrix[k] = (newMatrix[k] || []).filter(idx => idx !== taskIdx);
+    });
+    // Add to selected
+    if (!coveyMatrix?.[qId]?.includes(taskIdx)) {
+      newMatrix[qId] = [...(newMatrix[qId] || []), taskIdx];
+    }
+    onChange(newMatrix);
+  };
+
+  const activeTasks = tasks.filter(t => t && t.trim().length > 0);
+
+  return (
+    <div className="mt-4">
+      <div className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-3 flex items-center">
+        <LayoutGrid size={12} className="mr-1"/> Covey Time Matrix (Вазифаларни тақсимланг)
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {quadrants.map(q => (
+          <div key={q.id} className={`p-2 rounded-xl border ${q.border} ${q.color} min-h-[80px]`}>
+            <div className="text-[8px] font-black uppercase mb-2 border-b border-current/10 pb-1">{q.label}</div>
+            <div className="space-y-1">
+              {tasks.map((t, idx) => t.trim() && (
+                <button
+                  key={idx}
+                  onClick={() => toggleTask(q.id, idx)}
+                  className={`w-full text-left text-[9px] p-1 rounded transition-all leading-tight ${coveyMatrix?.[q.id]?.includes(idx) ? 'bg-current text-white font-bold shadow-sm' : 'opacity-30 hover:opacity-50'}`}
+                >
+                  {t.substring(0, 25)}{t.length > 25 ? '...' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {coveyMatrix?.Q2?.length === 0 && activeTasks.length > 0 && (
+        <p className="text-[9px] text-emerald-600 font-bold mt-2 animate-pulse">
+          ⚠️ Q2 да ҳеч нарса йўқ! Нейрохирурглар айнан Q2 да етишади.
+        </p>
+      )}
+    </div>
+  );
+};
 
 export default function DayPlan({ data, updateData, theme }) {
   const [aiAnalysis, setAiAnalysis] = useState(null);
@@ -89,6 +144,22 @@ export default function DayPlan({ data, updateData, theme }) {
          </button>
        </div>
 
+       {/* Identity Statement */}
+       <div className="mb-6">
+         <label className={`text-[10px] font-black uppercase tracking-widest opacity-40 block mb-2 ml-1`}>
+           Core Identity Statement (Napoleon Hill & Atomic Habits)
+         </label>
+         <div className="relative">
+            <input
+              value={data.identityStatement || ""}
+              onChange={(e) => updateData('planning', { ...data, identityStatement: e.target.value })}
+              className={`w-full rounded-xl p-3 pl-10 text-sm outline-none border transition-all duration-300 font-bold ${data.identityStatement ? 'border-indigo-500/50 bg-indigo-500/5 text-indigo-600' : theme.input}`}
+              placeholder="Бугун мен... (Масалан: Бугун мен интизомли нейрохирургман)"
+            />
+            <Star size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${data.identityStatement ? 'text-indigo-500' : 'opacity-20'}`} />
+         </div>
+       </div>
+
        {/* AI Feedback Box */}
        {aiAnalysis && (
          <div className="mb-4 bg-indigo-500/10 border border-indigo-500/30 p-3 rounded-xl animate-in fade-in slide-in-from-top-2">
@@ -145,7 +216,7 @@ export default function DayPlan({ data, updateData, theme }) {
          <h4 className={`font-bold flex items-center mb-3 text-sm opacity-80 ${theme.text}`}>
            <ListTodo size={16} className="mr-2"/> Эртанги 5 муҳим вазифа
          </h4>
-         <div className="space-y-2 mb-6">
+         <div className="space-y-2 mb-2">
            {[0, 1, 2, 3, 4].map((idx) => (
              <div key={idx} className="flex items-center">
                <span className="text-xs font-bold w-4 mr-2 opacity-50">{idx + 1}.</span>
@@ -158,6 +229,13 @@ export default function DayPlan({ data, updateData, theme }) {
              </div>
            ))}
          </div>
+
+         <CoveyMatrixWidget
+           tasks={data.tomorrowPlans || []}
+           coveyMatrix={data.coveyMatrix}
+           onChange={(newMatrix) => updateData('planning', { ...data, coveyMatrix: newMatrix })}
+           theme={theme}
+         />
        </div>
 
        {/* 3. DAILY REFLECTION (VOICE INPUT) */}
