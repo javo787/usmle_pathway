@@ -10,6 +10,9 @@ const DayLogSchema = new mongoose.Schema({
     tomorrowPlans: [{ type: String }],
     reflection:   { type: String, default: '' },
     coreIdea:     { type: String, default: '' },
+    identityStatement: { type: String, default: '' },
+    coveyMatrix: { type: mongoose.Schema.Types.Mixed, default: { Q1: [], Q2: [], Q3: [], Q4: [] } },
+    worryAnalysis: { type: mongoose.Schema.Types.Mixed, default: { worry: '', worstCase: '', controllable: '' } },
   },
 
   academic: {
@@ -34,6 +37,7 @@ const DayLogSchema = new mongoose.Schema({
     nafsRelapse:  { type: Boolean, default: false },
     qazoDone:     { type: Boolean, default: false },
     zulm:         { type: String,  default: ''    },
+    muhasaba:     { type: String,  default: ''    },
     sadaqa:       { type: Boolean, default: false },
     silaiRahm:    { type: Boolean, default: false },
     sleepQuality: { type: Number,  default: 0     },

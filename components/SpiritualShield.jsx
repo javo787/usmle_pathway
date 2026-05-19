@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Heart, Moon, MessageCircle, Clock, BookOpen, Star, X, Plus, Minus, Check } from 'lucide-react';
+import { Heart, Moon, MessageCircle, Clock, BookOpen, Star, X, Plus, Minus, Check, ShieldCheck } from 'lucide-react';
 
 const PRAYERS = [
   { key: 'fajr',    label: 'Бомдод' },
@@ -371,6 +371,27 @@ export default function SpiritualShield({ data, updateData, theme }) {
 
       {showZikr  && <ZikrModal  zikrs={zikrs} onClose={() => setShowZikr(false)}  onUpdate={updateZikrs} theme={theme}/>}
       {showQuran && <QuranModal data={data}   onClose={() => setShowQuran(false)} onUpdate={updateQuran} theme={theme}/>}
+
+      {/* Daily Muhasaba (Stoic & Islamic Self-Examination) */}
+      <div className="mt-6 pt-5 border-t border-current/10">
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-3 flex items-center gap-2">
+          <ShieldCheck size={12} className="text-amber-500"/> Кунлик Муҳосаба
+        </h4>
+        <div className="bg-black/20 rounded-2xl p-4 border border-amber-500/20">
+          <p className="text-[9px] text-amber-500/80 font-bold mb-2 uppercase tracking-wider">
+            Бугун нималарни қойиллатдингиз ва нимани эртага бошқача қиласиз?
+          </p>
+          <textarea
+            value={data.muhasaba || ''}
+            onChange={(e) => updateData('spiritual', { ...data, muhasaba: e.target.value })}
+            className={`w-full bg-transparent text-xs outline-none min-h-[80px] leading-relaxed italic ${theme.card.includes('1A0F') ? 'text-amber-100/90' : 'text-[#2C1A08]/80'}`}
+            placeholder="Ўз-ўзини тафтиш қилиш..."
+          />
+          <div className="flex justify-end mt-2">
+             <span className="text-[8px] font-bold text-amber-500/40 uppercase tracking-widest">Marcus Aurelius framing</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

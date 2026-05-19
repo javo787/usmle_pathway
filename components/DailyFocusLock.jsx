@@ -28,9 +28,18 @@ function isWeakTask(task, weakList = []) {
 
 // ─── component ──────────────────────────────────────────────────────────────
 
+const MOTIVATIONAL_QUOTES = [
+  "Ўзлигингни белгила: бугун сен бўлмоқчи бўлган нейрохирург каби ҳаракат қил.",
+  "Фақат назоратингдаги нарсаларга эътибор бер — диққатинг, ҳаракатинг ва дуонг.",
+  "Тўлиқ яшалган бир кун — энг муҳим бирлик. Фақат бугун билан яша.",
+  "Аниқ мақсад ва ёниб турган истак — барча муваффақиятларнинг бошланиши.",
+  "Кунни деворлар билан ўраб ол. Кечаги ва эртанги кун хавотири бугунни еб битирмасин."
+];
+
 export default function DailyFocusLock({ onUnlock }) {
   const [tasks,     setTasks]     = useState(['', '', '', '', '']);
   const [startTime, setStartTime] = useState('');
+  const [quoteIndex] = useState(() => Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length));
   const [showWarn,  setShowWarn]  = useState(false);
 
   // AI state
@@ -188,12 +197,11 @@ export default function DailyFocusLock({ onUnlock }) {
                 <Lock size={28} className="text-red-400"/>
               </div>
               <h2 className="text-2xl font-black text-white tracking-tight">🔒 Кун Блок</h2>
-              <p className="text-slate-300 text-sm mt-2 leading-relaxed max-w-xs">
-                Бугун ишлашни бошлашдан олдин — режа тузинг.{' '}
-                <span className="text-red-400 font-bold">Камида {REQUIRED_TASKS} та вазифа</span>,{' '}
-                ҳар бири камида{' '}
-                <span className="text-yellow-400 font-bold">{MIN_TASK_LENGTH} та ҳарф</span>.
-                Умумий сўзлар (<span className="text-red-400">"ўқиш"</span>) қабул қилинмайди.
+              <p className="text-slate-300 text-sm mt-2 leading-relaxed max-w-xs italic">
+                "{MOTIVATIONAL_QUOTES[quoteIndex]}"
+              </p>
+              <p className="text-slate-400 text-[10px] mt-3 uppercase tracking-widest font-bold">
+                Камида {REQUIRED_TASKS} та аниқ вазифа ({MIN_TASK_LENGTH}+ ҳарф)
               </p>
             </header>
 
@@ -341,6 +349,15 @@ export default function DailyFocusLock({ onUnlock }) {
                     <div className="flex items-start gap-2">
                       <Shield size={12} className="text-indigo-400 mt-0.5 flex-shrink-0"/>
                       <p className="text-xs text-indigo-200 leading-relaxed">{aiResult.islamic_note}</p>
+                    </div>
+                  </div>
+                )}
+
+                {aiResult.covey_warning && (
+                  <div className="rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="flex items-start gap-2">
+                      <Zap size={12} className="text-emerald-400 mt-0.5 flex-shrink-0"/>
+                      <p className="text-xs text-emerald-200 font-bold leading-relaxed">{aiResult.covey_warning}</p>
                     </div>
                   </div>
                 )}

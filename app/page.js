@@ -7,6 +7,7 @@ import { Zap } from 'lucide-react';
 
 import Quitzilla from '@/components/Quitzilla';
 import DayPlan from '@/components/DayPlan';
+import WorryBox from '@/components/WorryBox';
 import AcademicBattle from '@/components/AcademicBattle';
 import SpiritualShield from '@/components/SpiritualShield';
 import EnglishTutor from '@/components/EnglishTutor';
@@ -33,6 +34,9 @@ const EMPTY_DATA = (dateStr) => ({
     tomorrowPlans: ['', '', '', '', ''],
     reflection: '',
     coreIdea: '',
+    identityStatement: '',
+    coveyMatrix: { Q1: [], Q2: [], Q3: [], Q4: [] },
+    worryAnalysis: { worry: '', worstCase: '', controllable: '' },
   },
   academic: {
     // Немецкий язык
@@ -63,6 +67,7 @@ const EMPTY_DATA = (dateStr) => ({
     nafsRelapse: false,
     qazoDone: false,
     zulm: '',
+    muhasaba: '',
     sadaqa: false,
     silaiRahm: false,
   },
@@ -468,6 +473,7 @@ export default function Home() {
           <div>
             <div className="card-enter card-enter-1"><Quitzilla challenges={challenges} onAdd={addCh} onReset={resetCh} onDelete={delCh} theme={currentTheme}/></div>
             <div className="card-enter card-enter-2"><DayPlan data={data.planning} updateData={updateSection} theme={currentTheme}/></div>
+            <div className="card-enter card-enter-2.5"><WorryBox data={data.planning} updateData={updateSection} theme={currentTheme}/></div>
             <div className="card-enter card-enter-3"><AcademicBattle data={data.academic} updateData={updateSection} theme={currentTheme}/></div>
             <div className="card-enter card-enter-4"><SpiritualShield data={data.spiritual} updateData={updateSection} theme={currentTheme}/></div>
             <div className="card-enter card-enter-5"><EnglishTutor data={data.english} updateData={updateSection} theme={currentTheme}/></div>
