@@ -2,6 +2,8 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/components/AuthProvider';
 import NotificationManager from '@/components/NotificationManager';
+import PinGate from '@/components/PinGate';
+import DecoyStudyApp from '@/components/DecoyStudyApp';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
@@ -14,8 +16,8 @@ export const viewport = {
 }
 
 export const metadata = {
-  title: 'Muslim Doctor V2',
-  description: 'USMLE va Iymon yuksalishi uchun',
+  title: 'USMLE Pathway',
+  description: 'USMLE Step 1 study tracker',
   manifest: '/manifest.json',
 };
 
@@ -24,8 +26,10 @@ export default function RootLayout({ children }) {
     <html lang="uz">
       <body className={inter.className}>
         <AuthProvider>
-          <NotificationManager />
-          {children}
+          <PinGate decoyChildren={<DecoyStudyApp />}>
+            <NotificationManager />
+            {children}
+          </PinGate>
         </AuthProvider>
       </body>
     </html>

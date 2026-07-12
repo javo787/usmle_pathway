@@ -1,52 +1,66 @@
-⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
+
+> muslim-doctor-v2@0.1.0 dev
+> next dev
+
 ▲ Next.js 16.1.3 (Turbopack)
-- Local:         http://localhost:3001
-- Network:       http://192.168.0.2:3001
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
 
 ✓ Starting...
-✓ Ready in 1070ms
+✓ Ready in 1110ms
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
 ○ Compiling / ...
- GET / 200 in 7.4s (compile: 6.8s, render: 636ms)
-⨯ Error: MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.
-    at module evaluation (lib/mongodbAuth.js:13:11)
-    at module evaluation (app/api/auth/[...nextauth]/route.js:5:1)
-    at Object.<anonymous> (.next/dev/server/app/api/auth/[...nextauth]/route.js:9:3)
-  11 | if (typeof window === "undefined") {
-  12 |   if (!uri) {
-> 13 |     throw new Error("MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.");
-     |           ^
-  14 |   }
-  15 |
-  16 |   if (process.env.NODE_ENV === "development") { {
-  page: '/api/auth/session'
+ HEAD / 200 in 4.2s (compile: 4.0s, render: 210ms)
+ GET / 200 in 103ms (compile: 11ms, render: 93ms)
+[next-auth][warn][NEXTAUTH_URL]
+https://next-auth.js.org/warnings#nextauth_url
+[next-auth][warn][NO_SECRET]
+https://next-auth.js.org/warnings#no_secret
+ GET /api/auth/session 200 in 3.2s (compile: 3.1s, render: 38ms)
+MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+    at <unknown> (MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017) {
+  errorLabelSet: Set(0) {},
+  reason: [TopologyDescription],
+  code: undefined,
+  [cause]: MongoNetworkError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+      at <unknown> (MongoNetworkError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017) {
+    errorLabelSet: Set(3) { 'SystemOverloadedError', 'RetryableError', 'ResetPool' },
+    beforeHandshake: false,
+    [cause]: AggregateError:
+        at ignore-listed frames {
+      code: 'ECONNREFUSED'
+    }
+  }
 }
- GET /api/auth/session 500 in 4.9s
- GET / 200 in 80ms (compile: 6ms, render: 74ms)
-⨯ Error: MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.
-    at module evaluation (lib/mongodbAuth.js:13:11)
-    at module evaluation (app/api/auth/[...nextauth]/route.js:5:1)
-    at Object.<anonymous> (.next/dev/server/app/api/auth/[...nextauth]/route.js:9:3)
-  11 | if (typeof window === "undefined") {
-  12 |   if (!uri) {
-> 13 |     throw new Error("MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.");
-     |           ^
-  14 |   }
-  15 |
-  16 |   if (process.env.NODE_ENV === "development") { {
-  page: '/api/auth/session'
+⨯ unhandledRejection: MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+    at <unknown> (MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017) {
+  errorLabelSet: Set(0) {},
+  reason: [TopologyDescription],
+  code: undefined,
+  [cause]: MongoNetworkError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+      at <unknown> (MongoNetworkError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017) {
+    errorLabelSet: Set(3) { 'SystemOverloadedError', 'RetryableError', 'ResetPool' },
+    beforeHandshake: false,
+    [cause]: AggregateError:
+        at ignore-listed frames {
+      code: 'ECONNREFUSED'
+    }
+  }
 }
- GET /api/auth/session 500 in 102ms (compile: 88ms, render: 14ms)
-⨯ Error: MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.
-    at module evaluation (lib/mongodbAuth.js:13:11)
-    at module evaluation (app/api/auth/[...nextauth]/route.js:5:1)
-    at Object.<anonymous> (.next/dev/server/app/api/auth/[...nextauth]/route.js:9:3)
-  11 | if (typeof window === "undefined") {
-  12 |   if (!uri) {
-> 13 |     throw new Error("MONGODB_URI топилмади! Vercel Environment Variables га қўшинг.");
-     |           ^
-  14 |   }
-  15 |
-  16 |   if (process.env.NODE_ENV === "development") { {
-  page: '/api/auth/_log'
+⨯ unhandledRejection:  MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+    at <unknown> (MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017) {
+  errorLabelSet: Set(0) {},
+  reason: [TopologyDescription],
+  code: undefined,
+  [cause]: MongoNetworkError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+      at <unknown> (MongoNetworkError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017) {
+    errorLabelSet: Set(3) { 'SystemOverloadedError', 'RetryableError', 'ResetPool' },
+    beforeHandshake: false,
+    [cause]: AggregateError:
+        at ignore-listed frames {
+      code: 'ECONNREFUSED'
+    }
+  }
 }
- POST /api/auth/_log 500 in 128ms (compile: 93ms, render: 35ms)
