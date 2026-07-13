@@ -85,7 +85,8 @@ export default function DailyFocusLock({ onUnlock }) {
     onUnlock(formatted);
   }, [tasks, startTime, onUnlock]);
 
-  // ── AI check + unlock ────────────────────────────────────────────────────
+  // ── AI check + unlock (DISABLED — commented out, see below for active replacement) ──
+  /*
   const handleCheck = useCallback(async () => {
     if (!canSubmit) { setShowWarn(true); return; }
     setShowWarn(false);
@@ -153,6 +154,17 @@ export default function DailyFocusLock({ onUnlock }) {
         abortRef.current = null;
       }
     }
+  }, [canSubmit, tasks, startTime, onUnlock]);
+  */
+
+  // ── unlock without AI check (AI validation temporarily disabled — see commented block above) ──
+  const handleCheck = useCallback(() => {
+    if (!canSubmit) { setShowWarn(true); return; }
+    setShowWarn(false);
+    const formatted = tasks
+      .filter(t => t.trim().length >= MIN_TASK_LENGTH)
+      .map(t => `[${startTime}] ${t}`);
+    onUnlock(formatted);
   }, [canSubmit, tasks, startTime, onUnlock]);
 
   // ── render ────────────────────────────────────────────────────────────────
