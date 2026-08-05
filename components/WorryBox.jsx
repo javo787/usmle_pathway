@@ -43,7 +43,7 @@ export default function WorryBox({ data, updateData, theme }) {
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest opacity-40 block mb-1.5 ml-1">
-              Нима безовта қиляпти?
+              Нима безовта қилавотти?
             </label>
             <textarea
               value={worryData.worry || ''}
@@ -67,7 +67,7 @@ export default function WorryBox({ data, updateData, theme }) {
             </div>
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest opacity-40 block mb-1.5 ml-1">
-                Мен назорат қила оладиган нарса нима?
+                Ман назорат қила оладиган нарса нима?
               </label>
               <textarea
                 value={worryData.controllable || ''}
@@ -81,7 +81,7 @@ export default function WorryBox({ data, updateData, theme }) {
           {showAffirmation ? (
             <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-2xl animate-in zoom-in duration-300">
               <p className="text-xs font-medium text-emerald-600 text-center leading-relaxed">
-                "Сен фақат бугун учун яшайсан. Хавотир эртанги кунни ўгирмайди — у бугунни ўгиради."
+                "Хавотир эртанги куннинг дардини аритмайди, у фақат бугунги куннинг қувватини тортиб олади.                   Corrie ten Boom"
               </p>
             </div>
           ) : (
