@@ -1,6 +1,6 @@
 // handlers/messageHandler.js
 const { CONFIG } = require('../config');
-const { safeSend, getMasterEmail, isAllowed, escapeMarkdown } = require('../utils/telegram');
+const { safeSend, getMasterEmail, isAllowed, escapeMarkdown, splitIntoChunks } = require('../utils/telegram');
 const { getOrCreateLog } = require('../utils/dbHelpers');
 
 const MENU_PREFIXES = ['📊', '📝', '🤲', '💀', '💰', '🧠', '🏆', '❓'];
@@ -75,14 +75,11 @@ async function handleFreeChat(bot, tgId, msg, callGemini) {
 // Edit yuklanayotgan xabarni yoki yangi yuborish
 // ─────────────────────────────────────────────
 async function editOrSend(bot, tgId, loadingMsg, text) {
-  // safeSend ichida chunk'lash bor, lekin edit faqat birinchi qism uchun
-  const MAX = 4096;
-  const firstChunk  = text.slice(0, MAX);
-  const restChunks  = [];
-
-  for (let i = MAX; i < text.length; i += MAX) {
-    restChunks.push(text.slice(i, i + MAX));
-  }
+  // Bitta umumiy, qator chegarasini hurmat qiluvchi chunk'lash funksiyasi
+  // (avval bu yerda so'z/qator chegarasiga qaramaydigan qo'lda yozilgan
+  // slice(0, 4096) bor edi — endi safeSend bilan bir xil splitIntoChunks
+  // ishlatiladi, shunda ikkalasi izchil va bir xil ishlaydi).
+  const [firstChunk, ...restChunks] = splitIntoChunks(text, 4000);
 
   // Edit loading xabar
   try {
