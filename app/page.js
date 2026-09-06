@@ -411,7 +411,11 @@ export default function Home() {
 
   return (
    <ErrorBoundary>
-    <div className={`min-h-screen pb-28 transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
+    <div className={`min-h-screen transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
+     {/* Планшет/десктопда контент марказда, максимал энига чекланган —
+         fixed элементлар (nav, sync indicator, podcast тугмаси, modallar)
+         ҳам шу қутичага нисбатан жойлашади (transform orqali). */}
+     <div className="relative mx-auto w-full max-w-2xl min-h-screen pb-28 [transform:translateZ(0)]">
 
       <SyncIndicator />
 
@@ -548,6 +552,7 @@ export default function Home() {
           </div>
         </div>
       )}
+     </div>
     </div>
     </ErrorBoundary>
   );
