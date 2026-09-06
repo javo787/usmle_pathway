@@ -415,7 +415,7 @@ export default function Home() {
      {/* Планшет/десктопда контент марказда, максимал энига чекланган —
          fixed элементлар (nav, sync indicator, podcast тугмаси, modallar)
          ҳам шу қутичага нисбатан жойлашади (transform orqali). */}
-     <div className="relative mx-auto w-full max-w-2xl min-h-screen pb-28 [transform:translateZ(0)]">
+     <div className="relative mx-auto w-full max-w-2xl lg:landscape:max-w-5xl min-h-screen pb-28 [transform:translateZ(0)] transition-[max-width] duration-300">
 
       <SyncIndicator />
 
@@ -474,7 +474,7 @@ export default function Home() {
       {/* MAIN */}
       <main className="relative z-10 px-5 space-y-4">
         {view === 'journal' && (
-          <div>
+          <div className="lg:landscape:grid lg:landscape:grid-cols-2 lg:landscape:gap-4 lg:landscape:items-start lg:landscape:[&>*]:min-w-0">
             <div className="card-enter card-enter-1"><Quitzilla challenges={challenges} onAdd={addCh} onReset={resetCh} onDelete={delCh} theme={currentTheme}/></div>
             <div className="card-enter card-enter-2"><DayPlan data={data.planning} updateData={updateSection} theme={currentTheme}/></div>
             <div className="card-enter card-enter-2.5"><WorryBox data={data.planning} updateData={updateSection} theme={currentTheme}/></div>
@@ -483,7 +483,7 @@ export default function Home() {
             <div className="card-enter card-enter-5"><EnglishTutor data={data.english} updateData={updateSection} theme={currentTheme}/></div>
             <div className="card-enter card-enter-6"><SportsTracker data={data.sport} academicData={data.academic} updateData={updateSection} theme={currentTheme}/></div>
             <div className="card-enter card-enter-6"><MoneyWidget theme={currentTheme} onOpenMoney={() => setView('money')}/></div>
-            <div className="card-enter card-enter-6 mt-2 mb-6">
+            <div className="card-enter card-enter-6 mt-2 mb-6 lg:landscape:col-span-2">
               <button onClick={handleSaveCheck} disabled={syncStatus === 'saving'} className={`w-full py-4 text-white rounded-3xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all ${currentTheme.button} ${syncStatus === 'saving' ? 'opacity-70' : ''}`}>
                 {syncStatus === 'saving' ? <><Loader size={18} className="animate-spin"/> Сақланавотти...</> : <><Save size={18}/> Кунликни Сақлаш</>}
               </button>
@@ -501,7 +501,7 @@ export default function Home() {
 
       {/* NAV */}
       {view !== 'money' && <nav className={`fixed bottom-0 left-0 right-0 border-t pb-safe z-40 transition-all duration-700 glass ${currentTheme.nav}`}>
-        <div className="flex justify-around items-center h-16 px-2">
+        <div className="flex justify-around items-center h-16 px-2 max-w-2xl mx-auto">
           {[
             { id: 'journal',  icon: IconHome,     label: 'Журнал'  },
             { id: 'calendar', icon: IconCalendar,  label: 'Тарих'   },
