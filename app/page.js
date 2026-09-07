@@ -412,10 +412,12 @@ export default function Home() {
   return (
    <ErrorBoundary>
     <div className={`min-h-screen transition-all duration-700 ${currentTheme.appBg} ${currentTheme.text}`}>
-     {/* Планшет/десктопда контент марказда, максимал энига чекланган —
-         fixed элементлар (nav, sync indicator, podcast тугмаси, modallar)
-         ҳам шу қутичага нисбатан жойлашади (transform orqali). */}
-     <div className="relative mx-auto w-full max-w-2xl landscape:max-w-5xl min-h-screen pb-28 [transform:translateZ(0)] transition-[max-width] duration-300">
+     {/* Планшет/десктопда контент марказда, максимал энига чекланган.
+         Fixed элементлар (nav, sync indicator, podcast тугмаси, modallar)
+         ҳақиқий viewport'га нисбатан жойлашади (шунинг учун улар скролл
+         вақтида экранга "ёпишган" бўлиб қолади) — марказий устунга эмас,
+         шунинг учун бу ерда transform ишлатилмайди. */}
+     <div className="relative mx-auto w-full max-w-2xl landscape:max-w-5xl min-h-screen pb-28 transition-[max-width] duration-300">
 
       <SyncIndicator />
 
@@ -427,7 +429,7 @@ export default function Home() {
 
 
       {/* HEADER */}
-      <header className="relative z-10 px-5 pt-12 pb-5">
+      <header className="relative z-10 px-5 pt-12 pb-5 max-w-2xl">
         <div className="flex justify-between items-start mb-5">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{data.date}</p>
