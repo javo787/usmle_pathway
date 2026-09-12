@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Activity, Brain, Moon, TrendingUp, Shield, Languages, FileText, Link as LinkIcon, Anchor } from 'lucide-react';
+import { Activity, Brain, Moon, TrendingUp, Shield, Languages, FileText, Link as LinkIcon, Anchor, Loader, Zap } from 'lucide-react';
 
 const BarChart = ({ logs, dataKey, subKey, color }) => {
   // Last 7 days

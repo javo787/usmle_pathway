@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Target, CheckCircle2, Lock, ArrowRight, Clock,
   AlertTriangle, Loader, Shield, SkipForward, RefreshCw,
-  ChevronDown,
+  ChevronDown, Zap,
 } from 'lucide-react';
 
 const MIN_TASK_LENGTH = 15;
